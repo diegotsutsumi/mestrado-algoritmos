@@ -3,7 +3,7 @@
 #include <vector>
 #include "Exception.h"
 
-CNFChecker::CNFChecker(std::string _inputPath)
+CNFChecker::CNFChecker(std::string _inputPath)//O(n+11m)
 {
 	inputPath = _inputPath;
 	CNFStr="";
@@ -14,7 +14,7 @@ CNFChecker::CNFChecker(std::string _inputPath)
 	}
 }
 
-CNFChecker::CNFChecker(std::string _CNFStr, std::string _ValStr)
+CNFChecker::CNFChecker(std::string _CNFStr, std::string _ValStr)//O(n+11m)
 {
 	inputPath = "";
 	CNFStr=_CNFStr;
@@ -29,14 +29,14 @@ CNFChecker::~CNFChecker()
 {
 }
 
-std::string CNFChecker::run() //O(3n + 2m)
+std::string CNFChecker::run() //O(3n-2)
 {
 	bool val;
 
-	std::vector<std::string> CNFor = splitString(CNFStr.substr(1,CNFStr.size()-2),")∨("); //O(n)
+	std::vector<std::string> CNFor = splitString(CNFStr.substr(1,CNFStr.size()-2),")∨("); //O(n-2)
 	std::vector<std::string> CNFand;
 
-	for(unsigned int i=0; i<CNFor.size(); i++) //O(n)
+	for(unsigned int i=0; i<CNFor.size(); i++) //O(2n)
 	{
 		CNFand = splitString(CNFor[i],"∧");
 		val=true;
@@ -69,7 +69,7 @@ unsigned int CNFChecker::getLastVar()
 	return (unsigned int)ValArray.size();
 }
 
-bool CNFChecker::loadInput()//O(n+2m)
+bool CNFChecker::loadInput()//O(n+11m)
 {
 	std::ifstream inputFile;
 	if(CNFStr=="" || ValStr=="")
@@ -82,7 +82,7 @@ bool CNFChecker::loadInput()//O(n+2m)
 			}
 			inputFile.open(inputPath, std::ifstream::in);
 			getline(inputFile,CNFStr); //O(n)
-			getline(inputFile,ValStr); //O(m)
+			getline(inputFile,ValStr); //O(5m)
 			inputFile.close();
 		}
 		catch (Exception &e)
@@ -93,8 +93,8 @@ bool CNFChecker::loadInput()//O(n+2m)
 
 	if(ValArray.size()==0)
 	{
-		std::vector<string> ValSplit = splitString(ValStr," "); //O(m)
-		for(unsigned int i=0;i<ValSplit.size();i++)
+		std::vector<string> ValSplit = splitString(ValStr," "); //O(5m)
+		for(unsigned int i=0;i<ValSplit.size();i++) //O(m)
 		{
 			if(ValSplit[i]=="True")
 			{
@@ -111,7 +111,7 @@ bool CNFChecker::loadInput()//O(n+2m)
 	return true;
 }
 
-void CNFChecker::setValArray(std::vector<bool> _ValArray)
+void CNFChecker::setValArray(std::vector<bool> _ValArray)//O(m) ?
 {
 	ValArray = _ValArray;
 }
