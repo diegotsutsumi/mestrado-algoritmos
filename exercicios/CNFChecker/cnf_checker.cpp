@@ -16,7 +16,7 @@ int main (int argc, char* argv[])
 	try
 	{
 		cout << endl;
-		CNFChecker checker("input.cnf")//O(n+11m);
+		CNFChecker checker("input.cnf");//O(n+11m);
 		//CNFChecker checker("(1∧!2)∨(1∧3)∨(!2∧4)∨(3∧5∧!6)", "True True False False True False");//O(n+11m)
 		
 		std::string response = checker.run();//O(3n-2)

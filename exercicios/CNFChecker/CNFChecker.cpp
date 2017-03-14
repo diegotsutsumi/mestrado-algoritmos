@@ -29,16 +29,16 @@ CNFChecker::~CNFChecker()
 {
 }
 
-std::string CNFChecker::run() //O(3n-2)
+std::string CNFChecker::run() //O(3n-4)
 {
 	bool val;
 
-	std::vector<std::string> CNFor = splitString(CNFStr.substr(1,CNFStr.size()-2),")∨("); //O(n-2)
+	std::vector<std::string> CNFor = splitString(CNFStr.substr(1,CNFStr.size()-2),")∧("); //O(n-2)
 	std::vector<std::string> CNFand;
 
-	for(unsigned int i=0; i<CNFor.size(); i++) //O(2n)
+	for(unsigned int i=0; i<CNFor.size(); i++) //O(2n-2)
 	{
-		CNFand = splitString(CNFor[i],"∧");
+		CNFand = splitString(CNFor[i],"∨");
 		val=true;
 		for(unsigned int j=0; j<CNFand.size(); j++)
 		{
@@ -51,17 +51,17 @@ std::string CNFChecker::run() //O(3n-2)
 				val = ValArray[std::stoi(CNFand[j])-1];
 			}
 
-			if(!val)
+			if(val)
 			{
 				break;
 			}
 		}
-		if(val)
+		if(!val)
 		{
-			return "True";
+			return "False";
 		}
 	}
-	return "False";
+	return "True";
 }
 
 unsigned int CNFChecker::getLastVar()
