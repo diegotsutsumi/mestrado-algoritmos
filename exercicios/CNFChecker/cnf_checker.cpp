@@ -6,6 +6,9 @@
 
 using namespace std;
 
+//n -> number of Chars in CNF string
+//m- > number of boolean variables
+
 //O(n+11m) + O(3n-2) + O(m) + O(2^m)*O(2m)*O(3n-2)
 //O(4n+12m-2) + O((3n-2)(m^2)(2^m))
 
