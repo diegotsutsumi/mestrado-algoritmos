@@ -1,5 +1,5 @@
-#ifndef _PUSHER_RECEIVER_H_
-#define _PUSHER_RECEIVER_H_
+#ifndef _CNF_CHECKER_H_
+#define _CNF_CHECKER_H_
 
 #include <string>
 #include <fstream>
