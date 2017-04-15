@@ -1,29 +1,15 @@
-// STL
-#include <iostream>                  // for std::cout
- 
-// Boost
-#include <boost/graph/undirected_graph.hpp>// A subclass to provide reasonable arguments to adjacency_list for a typical undirected graph
-#include <boost/graph/graphviz.hpp>
- 
-void UndirectedGraph();
+#include <iostream> 
+#include "MarkovRandomField.h"
+
  
 int main(int,char*[])
 {
-	UndirectedGraph();
+	MarkovRandomField mrf("input.mrf");
+	mrf.drawMRF();
   	return 0;
 }
 
-struct EdgeProperty
-{
-	int weight;
-};
-
-struct VertexProperty
-{
-	std::string name;
-};
-
-void UndirectedGraph()
+/*void UndirectedGraph()
 {
 	// undirected_graph is a subclass of adjacency_list which gives you object oriented access to functions like add_vertex and add_edge, which makes the code easier to understand. However, it hard codes many of the template parameters, so it is much less flexible.
 
@@ -41,4 +27,4 @@ void UndirectedGraph()
 
 	std::ofstream dotfile("example.dot");
 	write_graphviz (dotfile, g, boost::make_label_writer(boost::get(&VertexProperty::name, g)),boost::make_label_writer(boost::get(&EdgeProperty::weight, g)));
-}
+}*/

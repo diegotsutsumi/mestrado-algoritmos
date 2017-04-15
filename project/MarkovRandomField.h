@@ -28,6 +28,8 @@ private:
 	std::vector<int> values;
 };*/
 typedef boost::undirected_graph<VertexProperty, EdgeProperty> Graph;
+typedef boost::graph_traits<Graph>::vertex_descriptor VertexDescriptor;
+typedef boost::graph_traits<Graph>::vertex_iterator VertexIterator;
 
 class MarkovRandomField
 {
@@ -45,6 +47,7 @@ private:
 
 	std::string inputPath;
 	bool loadInput();
+	std::vector<std::string> splitString(std::string str, std::string delimiter);
 };
 
 #endif
