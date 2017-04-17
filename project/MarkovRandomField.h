@@ -3,25 +3,31 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include <boost/graph/undirected_graph.hpp>// A subclass to provide reasonable arguments to adjacency_list for a typical undirected graph
 #include <boost/graph/graphviz.hpp>
 
-struct EdgeProperty
-{
-	int weight;
-};
+typedef std::pair<std::string, int> FactorVar;
+typedef std::vector<FactorVar> FactorVarVector;
 
-struct VertexProperty
+struct comp
 {
-	std::string name;
+	comp(std::string const& s) : _s(s) { }
+
+	bool operator () (FactorVar const& p)
+	{
+		return (p.first == _s);
+	}
+
+	std::string _s;
 };
 
 class MRFFactor
 {
 public:
 	MRFFactor();
-	MRFFactor(std::vector<std::pair<std::string, int>> var, std::vector<int> val);
+	MRFFactor(FactorVarVector var, std::vector<int> val);
 	~MRFFactor();
 
     MRFFactor operator*(MRFFactor b)
@@ -29,6 +35,7 @@ public:
 		MRFFactor ret;
 		if(!this->is_valid() || !b.is_valid())
 		{
+			std::cerr << "Invalid B or This: " << std::endl;
 			return ret;
 		}
 
@@ -44,28 +51,78 @@ public:
 			}
 		}
 		unsigned int valSize=1;
-		for(int i=0;i<=ret.variables.size();i++)
+		for(int i=0;i<ret.variables.size();i++)
 		{
 			valSize=valSize*ret.variables[i].second;
 		}
+		FactorVarVector ass, assB, assThis;
 
-		/*TODO: FINISH*/
+		assB = b.variables;
+		assThis = this->variables;
+		ret.values.resize(valSize, 0);
+		for(int i=0;i<valSize;i++)
+		{
+			ass = ret.getAssignment(i);
+			for(int j=0; j<assB.size(); j++)
+			{
+				FactorVarVector::iterator iter = std::find_if(ass.begin(), ass.end(), comp(assB[j].first));
+				if(iter != ass.end())
+				{
+					assB[j].second = iter->second;
+				}
+				else
+				{
+					std::cerr << "ERROR, should never end up here" << std::endl;
+					return ret;
+				}
+			}
+
+			for(int j=0; j<assThis.size(); j++)
+			{
+				FactorVarVector::iterator iter = std::find_if(ass.begin(), ass.end(), comp(assThis[j].first));
+				if(iter != ass.end())
+				{
+					assThis[j].second = iter->second;
+				}
+				else
+				{
+					std::cerr << "ERROR, should never end up here" << std::endl;
+					return ret;
+				}
+			}
+
+			ret.values[i] = b.getValue(assB) * this->getValue(assThis);
+		}
+
 		return ret;
 	}
 	//TODO Marginalize
 	//TODO Factor Sum
 	//TODO Factor Reduction
 
-	int getValue(std::vector<std::pair<std::string,int>> assignment);
+	FactorVarVector getVariables();
+	int getValue(FactorVarVector assignment);
 	int getValue(unsigned int idx);
-	std::vector<std::pair<std::string,int>> getAssignment(unsigned int idx);
-	unsigned int getIndex(std::vector<std::pair<std::string, int>> assign);
 
+	FactorVarVector getAssignment(unsigned int idx);
+	unsigned int getIndex(FactorVarVector assign);
+
+	void printFactor();
 private:
-	std::vector<std::pair<std::string,int>> variables;
+	FactorVarVector variables;
 	std::vector<int> values;
 
 	bool is_valid();
+};
+
+struct EdgeProperty
+{
+	int weight;
+};
+
+struct VertexProperty
+{
+	std::string name;
 };
 
 typedef boost::undirected_graph<VertexProperty, EdgeProperty> Graph;

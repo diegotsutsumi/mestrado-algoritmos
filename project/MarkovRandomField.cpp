@@ -11,7 +11,7 @@ MRFFactor::~MRFFactor()
 {
 
 }
-MRFFactor::MRFFactor(std::vector<std::pair<std::string, int>>var, std::vector<int> val)
+MRFFactor::MRFFactor(FactorVarVector var, std::vector<int> val)
 {
 	variables = var;
 	values = val;
@@ -40,11 +40,18 @@ bool MRFFactor::is_valid()
 	}
 }
 
-std::vector<std::pair<std::string,int>> MRFFactor::getAssignment(unsigned int idx)
+
+FactorVarVector MRFFactor::getVariables()
 {
-	std::vector<std::pair<std::string, int>> assRet;
+	return variables;
+}
+
+FactorVarVector MRFFactor::getAssignment(unsigned int idx)
+{
+	FactorVarVector assRet;
 	if(idx>=values.size())
 	{
+		std::cout << "idx: " << idx << std::endl;
 		return assRet;
 	}
 	
@@ -63,7 +70,7 @@ std::vector<std::pair<std::string,int>> MRFFactor::getAssignment(unsigned int id
 	return assRet;
 }
 
-unsigned int MRFFactor::getIndex(std::vector<std::pair<std::string, int>> assign)
+unsigned int MRFFactor::getIndex(FactorVarVector assign)
 {
 	unsigned int retIdx=0;
 
@@ -99,6 +106,47 @@ unsigned int MRFFactor::getIndex(std::vector<std::pair<std::string, int>> assign
 	}
 	return retIdx;
 }
+
+int MRFFactor::getValue(FactorVarVector assignment)
+{
+	unsigned int idx = getIndex(assignment);
+	if(idx >= values.size())
+	{
+		throw std::invalid_argument("Invalid Argument");
+	}
+	return values[idx];
+}
+
+int MRFFactor::getValue(unsigned int idx)
+{
+	if(idx >= values.size())
+	{
+		throw std::invalid_argument("Invalid Argument");
+	}
+	return values[idx];
+}
+
+void MRFFactor::printFactor()
+{
+	for(int i=(variables.size()-1);i>=0;i--)
+	{
+		std::cout << variables[i].first << " ";
+	}
+	std::cout << std::endl;
+
+	FactorVarVector ass;
+	for(int i=0;i<values.size();i++)
+	{
+		ass = getAssignment(i);
+		for(int i=(ass.size()-1);i>=0;i--)
+		{
+			std::cout << ass[i].second << "     ";
+		}
+		std::cout << " | ";
+		std::cout << getValue(i) << std::endl;
+	}
+}
+
 
 MarkovRandomField::MarkovRandomField(std::string _inputPath)
 {
