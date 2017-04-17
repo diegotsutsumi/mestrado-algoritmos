@@ -3,7 +3,104 @@
 #include <exception>
 #include "MarkovRandomField.h"
 
-MarkovRandomField::MarkovRandomField(std::string _inputPath)//O(n+11m)
+MRFFactor::MRFFactor()
+{
+
+}
+MRFFactor::~MRFFactor()
+{
+
+}
+MRFFactor::MRFFactor(std::vector<std::pair<std::string, int>>var, std::vector<int> val)
+{
+	variables = var;
+	values = val;
+	if(!is_valid())
+	{
+		std::cerr << "Invalid factor" << std::endl;
+		variables.clear();
+		values.clear();
+	}
+}
+
+bool MRFFactor::is_valid()
+{
+	unsigned int valSize=1;
+	for(int i=0;i<variables.size();i++)
+	{
+		valSize=valSize*variables[i].second;
+	}
+	if(values.size()!=valSize)
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
+
+std::vector<std::pair<std::string,int>> MRFFactor::getAssignment(unsigned int idx)
+{
+	std::vector<std::pair<std::string, int>> assRet;
+	if(idx>=values.size())
+	{
+		return assRet;
+	}
+	
+	assRet = variables;
+	unsigned int den;
+	for(int i=0;i<assRet.size();i++)
+	{
+		den=1;
+		for(int j=0; j<i; j++)
+		{
+			den = den*variables[j].second;
+		}
+		assRet[i].second = idx / (den);
+		assRet[i].second = assRet[i].second % variables[i].second;
+	}
+	return assRet;
+}
+
+unsigned int MRFFactor::getIndex(std::vector<std::pair<std::string, int>> assign)
+{
+	unsigned int retIdx=0;
+
+	if(assign.size() != variables.size())
+	{
+		return -1;
+	}
+	unsigned int varNum=1;
+	unsigned int assVarNum=1;
+	for(int i=0;i<variables.size();i++)
+	{
+		if(assign[i].first!=variables[i].first || assign[i].second>=variables[i].second)
+		{
+			return -1;
+		}
+	}
+
+	for(int i=0;i<assign.size();i++)
+	{
+		if(i==0)
+		{
+			retIdx = retIdx + assign[i].second;
+		}
+		else
+		{
+			unsigned int mul=1;
+			for(int j=0; j<i; j++)
+			{
+				mul = mul*variables[j].second;
+			}
+			retIdx = retIdx + assign[i].second*mul;
+		}
+	}
+	return retIdx;
+}
+
+MarkovRandomField::MarkovRandomField(std::string _inputPath)
 {
 	inputPath = _inputPath;
 
