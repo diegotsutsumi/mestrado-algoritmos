@@ -30,75 +30,25 @@ public:
 	MRFFactor(FactorVarVector var, std::vector<int> val);
 	~MRFFactor();
 
-    MRFFactor operator*(MRFFactor b)
+	MRFFactor operator*(MRFFactor b)
 	{
-		MRFFactor ret;
-		if(!this->is_valid() || !b.is_valid())
-		{
-			std::cerr << "Invalid B or This: " << std::endl;
-			return ret;
-		}
-
-		for(int i=0;i<this->variables.size();i++)
-		{
-			ret.variables.push_back(this->variables[i]);
-		}
-		for(int i=0;i<b.variables.size();i++)
-		{
-			if(std::find(ret.variables.begin(), ret.variables.end(), b.variables[i])==ret.variables.end())
-			{
-				ret.variables.push_back(b.variables[i]);
-			}
-		}
-		unsigned int valSize=1;
-		for(int i=0;i<ret.variables.size();i++)
-		{
-			valSize=valSize*ret.variables[i].second;
-		}
-		FactorVarVector ass, assB, assThis;
-
-		assB = b.variables;
-		assThis = this->variables;
-		ret.values.resize(valSize, 0);
-		for(int i=0;i<valSize;i++)
-		{
-			ass = ret.getAssignment(i);
-			for(int j=0; j<assB.size(); j++)
-			{
-				FactorVarVector::iterator iter = std::find_if(ass.begin(), ass.end(), comp(assB[j].first));
-				if(iter != ass.end())
-				{
-					assB[j].second = iter->second;
-				}
-				else
-				{
-					std::cerr << "ERROR, should never end up here" << std::endl;
-					return ret;
-				}
-			}
-
-			for(int j=0; j<assThis.size(); j++)
-			{
-				FactorVarVector::iterator iter = std::find_if(ass.begin(), ass.end(), comp(assThis[j].first));
-				if(iter != ass.end())
-				{
-					assThis[j].second = iter->second;
-				}
-				else
-				{
-					std::cerr << "ERROR, should never end up here" << std::endl;
-					return ret;
-				}
-			}
-
-			ret.values[i] = b.getValue(assB) * this->getValue(assThis);
-		}
-
-		return ret;
+		auto f = [](int a, int b){return a*b;};
+		return factorBinaryOperation(*this, b, f);
 	}
-	//TODO Marginalize
-	//TODO Factor Sum
+	MRFFactor operator+(MRFFactor b)
+	{
+		auto f = [](int a, int b){return a+b;};
+		return factorBinaryOperation(*this, b, f);
+	}
+	MRFFactor operator-(MRFFactor b)
+	{
+		auto f = [](int a, int b){return a-b;};
+		return factorBinaryOperation(*this, b, f);
+	}
+
 	//TODO Factor Reduction
+	//TODO Calculate Partition Function
+	//TODO Normalize
 
 	FactorVarVector getVariables();
 	int getValue(FactorVarVector assignment);
@@ -108,11 +58,16 @@ public:
 	unsigned int getIndex(FactorVarVector assign);
 
 	void printFactor();
+
+	void marginalize(FactorVar margVar);
+	void reduce(FactorVar reductionVar);
 private:
 	FactorVarVector variables;
 	std::vector<int> values;
 
 	bool is_valid();
+
+	MRFFactor factorBinaryOperation(MRFFactor a, MRFFactor b, std::function<int(int,int)> operation);
 };
 
 struct EdgeProperty

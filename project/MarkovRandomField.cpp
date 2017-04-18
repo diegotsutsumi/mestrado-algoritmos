@@ -147,6 +147,128 @@ void MRFFactor::printFactor()
 	}
 }
 
+void MRFFactor::marginalize(FactorVar margVar)
+{
+	FactorVarVector new_ass, ass;
+	FactorVarVector new_variables;
+	std::vector<int> new_values;
+
+	ass = variables;
+	FactorVarVector::iterator iter = std::find_if(ass.begin(), ass.end(), comp(margVar.first));
+	unsigned int margIndex = (iter - ass.begin());
+	if(iter==ass.end())
+	{
+		//Variable not found
+		return;
+	}
+
+	for(int i=0; i<variables.size(); i++)
+	{
+		if(margVar.first != variables[i].first)
+		{
+			new_variables.push_back(variables[i]);
+		}
+	}
+	unsigned int valSize=1;
+	for(int i=0;i<new_variables.size();i++)
+	{
+		valSize=valSize*new_variables[i].second;
+	}
+	new_values.resize(valSize,0);
+
+	MRFFactor newFactor(new_variables, new_values);
+	int sum=0;
+	for(int i=0;i<valSize;i++)
+	{
+		new_ass = newFactor.getAssignment(i);
+
+		for(int j=0;j<ass.size();j++)
+		{
+			if(j<margIndex)
+			{
+				ass[j].second = new_ass[j].second;
+			}
+			else if(j>margIndex)
+			{
+				ass[j].second = new_ass[j-1].second;
+			}
+		}
+		sum=0;
+		for(int j=0;j<variables[margIndex].second;j++)
+		{
+			ass[margIndex].second = j;
+			sum = sum + getValue(ass);
+		}
+		newFactor.values[i] = sum;
+	}
+	variables = newFactor.variables;
+	values = newFactor.values;
+}
+
+MRFFactor MRFFactor::factorBinaryOperation(MRFFactor a, MRFFactor b, std::function<int(int,int)> operation)
+{
+	MRFFactor ret;
+	if(!a.is_valid() || !b.is_valid())
+	{
+		std::cerr << "Invalid B or A: " << std::endl;
+		return ret;
+	}
+
+	for(int i=0;i<a.variables.size();i++)
+	{
+		ret.variables.push_back(a.variables[i]);
+	}
+	for(int i=0;i<b.variables.size();i++)
+	{
+		if(std::find(ret.variables.begin(), ret.variables.end(), b.variables[i])==ret.variables.end())
+		{
+			ret.variables.push_back(b.variables[i]);
+		}
+	}
+	unsigned int valSize=1;
+	for(int i=0;i<ret.variables.size();i++)
+	{
+		valSize=valSize*ret.variables[i].second;
+	}
+	FactorVarVector ass, assB, assA;
+
+	assB = b.variables;
+	assA = a.variables;
+	ret.values.resize(valSize, 0);
+	for(int i=0;i<valSize;i++)
+	{
+		ass = ret.getAssignment(i);
+		for(int j=0; j<assB.size(); j++)
+		{
+			FactorVarVector::iterator iter = std::find_if(ass.begin(), ass.end(), comp(assB[j].first));
+			if(iter != ass.end())
+			{
+				assB[j].second = iter->second;
+			}
+			else
+			{
+				std::cerr << "ERROR, should never end up here" << std::endl;
+				return ret;
+			}
+		}
+
+		for(int j=0; j<assA.size(); j++)
+		{
+			FactorVarVector::iterator iter = std::find_if(ass.begin(), ass.end(), comp(assA[j].first));
+			if(iter != ass.end())
+			{
+				assA[j].second = iter->second;
+			}
+			else
+			{
+				std::cerr << "ERROR, should never end up here" << std::endl;
+				return ret;
+			}
+		}
+		ret.values[i] = operation(b.getValue(assB),a.getValue(assA));
+	}
+	return ret;
+}
 
 MarkovRandomField::MarkovRandomField(std::string _inputPath)
 {

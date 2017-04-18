@@ -5,6 +5,40 @@
 int main(int,char*[])
 {
 	MarkovRandomField mrf("input.mrf");
+	std::vector<int> values = {6,53,67,1,2,7,3,8,10,1,2,3};
+	std::vector<std::pair<std::string, int>> variables, testCase;
+	std::pair<std::string, int> example;
+
+	example = std::make_pair("node1", 2);
+	variables.push_back(example);
+	example = std::make_pair("node2", 3);
+	variables.push_back(example);
+	example = std::make_pair("node3", 2);
+	variables.push_back(example);
+	std::cout << "Creating first factor" << std::endl;
+	MRFFactor mrff(variables, values);
+
+
+
+	values = {4,53,67,1,2,2,3,8,1,1,2,3};
+	variables[2].first = "node6";
+	std::cout << "Creating second factor" << std::endl;
+	MRFFactor mrff1(variables, values);
+
+	std::cout << "Multiplying two factors" << std::endl;
+	MRFFactor mrff2 = mrff * mrff1;
+
+	mrff.printFactor();
+	std::cout << std::endl << std::endl;
+	mrff1.printFactor();
+	std::cout << std::endl << std::endl;
+	mrff2.printFactor();
+	std::cout << std::endl << std::endl;
+
+	mrff2.marginalize(variables[1]);
+	mrff2.printFactor();
+	std::cout << std::endl << std::endl;
+
 	mrf.drawMRF();
   	return 0;
 }
