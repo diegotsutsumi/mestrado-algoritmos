@@ -33,17 +33,17 @@ public:
 	MRFFactor operator*(MRFFactor b)
 	{
 		auto f = [](int a, int b){return a*b;};
-		return factorBinaryOperation(*this, b, f);
+		return factorBinaryOperation(this, &b, f);
 	}
 	MRFFactor operator+(MRFFactor b)
 	{
 		auto f = [](int a, int b){return a+b;};
-		return factorBinaryOperation(*this, b, f);
+		return factorBinaryOperation(this, &b, f);
 	}
 	MRFFactor operator-(MRFFactor b)
 	{
 		auto f = [](int a, int b){return a-b;};
-		return factorBinaryOperation(*this, b, f);
+		return factorBinaryOperation(this, &b, f);
 	}
 
 	//TODO Factor Reduction
@@ -59,15 +59,41 @@ public:
 
 	void printFactor();
 
-	void marginalize(FactorVar margVar);
-	void reduce(FactorVar reductionVar);
+	void marginalize(FactorVar margVar)
+	{
+		MRFFactor newFactor = factorEliminationOperation(this,&margVar,
+								[](MRFFactor *_this, FactorVarVector *ass,unsigned int elim_index, unsigned int elim_card, unsigned int elim_ass)
+									{
+										int sum=0;
+										for(int j=0;j<elim_card;j++)
+										{
+											(*ass)[elim_index].second = j;
+											sum = sum + _this->getValue(*ass);
+										}
+										return sum;
+									});
+		variables = newFactor.variables;
+		values = newFactor.values;
+	}
+	void reduce(FactorVar reductionVar)
+	{
+		MRFFactor newFactor = factorEliminationOperation(this,&reductionVar,
+								[](MRFFactor *_this, FactorVarVector *ass,unsigned int elim_index, unsigned int elim_card, unsigned int elim_ass)
+									{
+										(*ass)[elim_index].second = elim_ass;
+										return _this->getValue(*ass);
+									});
+		variables = newFactor.variables;
+		values = newFactor.values;
+	}
 private:
 	FactorVarVector variables;
 	std::vector<int> values;
 
 	bool is_valid();
 
-	MRFFactor factorBinaryOperation(MRFFactor a, MRFFactor b, std::function<int(int,int)> operation);
+	MRFFactor factorBinaryOperation(MRFFactor *a, MRFFactor *b, std::function<int(int,int)> operation);
+	MRFFactor factorEliminationOperation(MRFFactor *a, FactorVar *eliminateVar, std::function<int(MRFFactor*,FactorVarVector*,unsigned int,unsigned int,unsigned int)> operation);
 };
 
 struct EdgeProperty

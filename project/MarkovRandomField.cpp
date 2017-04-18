@@ -147,24 +147,24 @@ void MRFFactor::printFactor()
 	}
 }
 
-void MRFFactor::marginalize(FactorVar margVar)
+MRFFactor MRFFactor::factorEliminationOperation(MRFFactor *a, FactorVar *eliminateVar, std::function<int(MRFFactor*,FactorVarVector*,unsigned int,unsigned int,unsigned int)> operation)
 {
 	FactorVarVector new_ass, ass;
 	FactorVarVector new_variables;
 	std::vector<int> new_values;
 
 	ass = variables;
-	FactorVarVector::iterator iter = std::find_if(ass.begin(), ass.end(), comp(margVar.first));
-	unsigned int margIndex = (iter - ass.begin());
+	FactorVarVector::iterator iter = std::find_if(ass.begin(), ass.end(), comp(eliminateVar->first));
+	unsigned int eliminateIndex = (iter - ass.begin());
 	if(iter==ass.end())
 	{
 		//Variable not found
-		return;
+		return *a;
 	}
 
 	for(int i=0; i<variables.size(); i++)
 	{
-		if(margVar.first != variables[i].first)
+		if(eliminateVar->first != variables[i].first)
 		{
 			new_variables.push_back(variables[i]);
 		}
@@ -184,45 +184,39 @@ void MRFFactor::marginalize(FactorVar margVar)
 
 		for(int j=0;j<ass.size();j++)
 		{
-			if(j<margIndex)
+			if(j<eliminateIndex)
 			{
 				ass[j].second = new_ass[j].second;
 			}
-			else if(j>margIndex)
+			else if(j>eliminateIndex)
 			{
 				ass[j].second = new_ass[j-1].second;
 			}
 		}
-		sum=0;
-		for(int j=0;j<variables[margIndex].second;j++)
-		{
-			ass[margIndex].second = j;
-			sum = sum + getValue(ass);
-		}
-		newFactor.values[i] = sum;
+
+		newFactor.values[i] = operation(a,&ass,eliminateIndex,variables[eliminateIndex].second,eliminateVar->second);
 	}
-	variables = newFactor.variables;
-	values = newFactor.values;
+	return newFactor;
 }
 
-MRFFactor MRFFactor::factorBinaryOperation(MRFFactor a, MRFFactor b, std::function<int(int,int)> operation)
+MRFFactor MRFFactor::factorBinaryOperation(MRFFactor *a, MRFFactor *b, std::function<int(int,int)> operation)
 {
 	MRFFactor ret;
-	if(!a.is_valid() || !b.is_valid())
+	if(!a->is_valid() || !b->is_valid())
 	{
 		std::cerr << "Invalid B or A: " << std::endl;
 		return ret;
 	}
 
-	for(int i=0;i<a.variables.size();i++)
+	for(int i=0;i<a->variables.size();i++)
 	{
-		ret.variables.push_back(a.variables[i]);
+		ret.variables.push_back(a->variables[i]);
 	}
-	for(int i=0;i<b.variables.size();i++)
+	for(int i=0;i<b->variables.size();i++)
 	{
-		if(std::find(ret.variables.begin(), ret.variables.end(), b.variables[i])==ret.variables.end())
+		if(std::find(ret.variables.begin(), ret.variables.end(), b->variables[i])==ret.variables.end())
 		{
-			ret.variables.push_back(b.variables[i]);
+			ret.variables.push_back(b->variables[i]);
 		}
 	}
 	unsigned int valSize=1;
@@ -232,8 +226,8 @@ MRFFactor MRFFactor::factorBinaryOperation(MRFFactor a, MRFFactor b, std::functi
 	}
 	FactorVarVector ass, assB, assA;
 
-	assB = b.variables;
-	assA = a.variables;
+	assB = b->variables;
+	assA = a->variables;
 	ret.values.resize(valSize, 0);
 	for(int i=0;i<valSize;i++)
 	{
@@ -265,11 +259,10 @@ MRFFactor MRFFactor::factorBinaryOperation(MRFFactor a, MRFFactor b, std::functi
 				return ret;
 			}
 		}
-		ret.values[i] = operation(b.getValue(assB),a.getValue(assA));
+		ret.values[i] = operation(b->getValue(assB),a->getValue(assA));
 	}
 	return ret;
 }
-
 MarkovRandomField::MarkovRandomField(std::string _inputPath)
 {
 	inputPath = _inputPath;
