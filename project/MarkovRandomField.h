@@ -27,32 +27,31 @@ class MRFFactor
 {
 public:
 	MRFFactor();
-	MRFFactor(FactorVarVector var, std::vector<int> val);
+	MRFFactor(FactorVarVector var, std::vector<double> val);
 	~MRFFactor();
 
 	MRFFactor operator*(MRFFactor b)
 	{
-		auto f = [](int a, int b){return a*b;};
+		auto f = [](double a, double b){return a*b;};
 		return factorBinaryOperation(this, &b, f);
 	}
 	MRFFactor operator+(MRFFactor b)
 	{
-		auto f = [](int a, int b){return a+b;};
+		auto f = [](double a, double b){return a+b;};
 		return factorBinaryOperation(this, &b, f);
 	}
 	MRFFactor operator-(MRFFactor b)
 	{
-		auto f = [](int a, int b){return a-b;};
+		auto f = [](double a, double b){return a-b;};
 		return factorBinaryOperation(this, &b, f);
 	}
 
-	//TODO Factor Reduction
 	//TODO Calculate Partition Function
 	//TODO Normalize
 
 	FactorVarVector getVariables();
-	int getValue(FactorVarVector assignment);
-	int getValue(unsigned int idx);
+	double getValue(FactorVarVector assignment);
+	double getValue(unsigned int idx);
 
 	FactorVarVector getAssignment(unsigned int idx);
 	unsigned int getIndex(FactorVarVector assign);
@@ -63,15 +62,15 @@ public:
 	{
 		MRFFactor newFactor = factorEliminationOperation(this,&margVar,
 								[](MRFFactor *_this, FactorVarVector *ass,unsigned int elim_index, unsigned int elim_card, unsigned int elim_ass)
+								{
+									double sum=0;
+									for(unsigned int j=0;j<elim_card;j++)
 									{
-										int sum=0;
-										for(int j=0;j<elim_card;j++)
-										{
-											(*ass)[elim_index].second = j;
-											sum = sum + _this->getValue(*ass);
-										}
-										return sum;
-									});
+										(*ass)[elim_index].second = j;
+										sum = sum + _this->getValue(*ass);
+									}
+									return sum;
+								});
 		variables = newFactor.variables;
 		values = newFactor.values;
 	}
@@ -79,16 +78,16 @@ public:
 	{
 		MRFFactor newFactor = factorEliminationOperation(this,&reductionVar,
 								[](MRFFactor *_this, FactorVarVector *ass,unsigned int elim_index, unsigned int elim_card, unsigned int elim_ass)
-									{
-										(*ass)[elim_index].second = elim_ass;
-										return _this->getValue(*ass);
-									});
+								{
+									(*ass)[elim_index].second = elim_ass;
+									return _this->getValue(*ass);
+								});
 		variables = newFactor.variables;
 		values = newFactor.values;
 	}
 private:
 	FactorVarVector variables;
-	std::vector<int> values;
+	std::vector<double> values;
 
 	bool is_valid();
 
@@ -123,6 +122,7 @@ public:
 private:
 	Graph MRFGraph;
 	Graph CliqueTree;
+	std::vector<MRFFactor> Factors;
 
 	std::string inputPath;
 	bool loadInput();

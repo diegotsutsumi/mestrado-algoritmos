@@ -11,7 +11,7 @@ MRFFactor::~MRFFactor()
 {
 
 }
-MRFFactor::MRFFactor(FactorVarVector var, std::vector<int> val)
+MRFFactor::MRFFactor(FactorVarVector var, std::vector<double> val)
 {
 	variables = var;
 	values = val;
@@ -26,7 +26,7 @@ MRFFactor::MRFFactor(FactorVarVector var, std::vector<int> val)
 bool MRFFactor::is_valid()
 {
 	unsigned int valSize=1;
-	for(int i=0;i<variables.size();i++)
+	for(unsigned int i=0;i<variables.size();i++)
 	{
 		valSize=valSize*variables[i].second;
 	}
@@ -34,10 +34,7 @@ bool MRFFactor::is_valid()
 	{
 		return false;
 	}
-	else
-	{
-		return true;
-	}
+	return true;
 }
 
 
@@ -51,16 +48,15 @@ FactorVarVector MRFFactor::getAssignment(unsigned int idx)
 	FactorVarVector assRet;
 	if(idx>=values.size())
 	{
-		std::cout << "idx: " << idx << std::endl;
 		return assRet;
 	}
 	
 	assRet = variables;
 	unsigned int den;
-	for(int i=0;i<assRet.size();i++)
+	for(unsigned int i=0;i<assRet.size();i++)
 	{
 		den=1;
-		for(int j=0; j<i; j++)
+		for(unsigned int j=0; j<i; j++)
 		{
 			den = den*variables[j].second;
 		}
@@ -78,9 +74,8 @@ unsigned int MRFFactor::getIndex(FactorVarVector assign)
 	{
 		return -1;
 	}
-	unsigned int varNum=1;
-	unsigned int assVarNum=1;
-	for(int i=0;i<variables.size();i++)
+
+	for(unsigned int i=0;i<variables.size();i++)
 	{
 		if(assign[i].first!=variables[i].first || assign[i].second>=variables[i].second)
 		{
@@ -88,7 +83,7 @@ unsigned int MRFFactor::getIndex(FactorVarVector assign)
 		}
 	}
 
-	for(int i=0;i<assign.size();i++)
+	for(unsigned int i=0;i<assign.size();i++)
 	{
 		if(i==0)
 		{
@@ -97,7 +92,7 @@ unsigned int MRFFactor::getIndex(FactorVarVector assign)
 		else
 		{
 			unsigned int mul=1;
-			for(int j=0; j<i; j++)
+			for(unsigned int j=0; j<i; j++)
 			{
 				mul = mul*variables[j].second;
 			}
@@ -107,7 +102,7 @@ unsigned int MRFFactor::getIndex(FactorVarVector assign)
 	return retIdx;
 }
 
-int MRFFactor::getValue(FactorVarVector assignment)
+double MRFFactor::getValue(FactorVarVector assignment)
 {
 	unsigned int idx = getIndex(assignment);
 	if(idx >= values.size())
@@ -117,7 +112,7 @@ int MRFFactor::getValue(FactorVarVector assignment)
 	return values[idx];
 }
 
-int MRFFactor::getValue(unsigned int idx)
+double MRFFactor::getValue(unsigned int idx)
 {
 	if(idx >= values.size())
 	{
@@ -128,19 +123,18 @@ int MRFFactor::getValue(unsigned int idx)
 
 void MRFFactor::printFactor()
 {
-	for(int i=(variables.size()-1);i>=0;i--)
+	for(int i=((int)(variables.size())-1);i>=0;i--)
 	{
 		std::cout << variables[i].first << " ";
 	}
 	std::cout << std::endl;
-
 	FactorVarVector ass;
-	for(int i=0;i<values.size();i++)
+	for(unsigned int i=0;i<values.size();i++)
 	{
 		ass = getAssignment(i);
-		for(int i=(ass.size()-1);i>=0;i--)
+		for(int j=((int)(ass.size())-1);j>=0;j--)
 		{
-			std::cout << ass[i].second << "     ";
+			std::cout << ass[j].second << "     ";
 		}
 		std::cout << " | ";
 		std::cout << getValue(i) << std::endl;
@@ -151,7 +145,7 @@ MRFFactor MRFFactor::factorEliminationOperation(MRFFactor *a, FactorVar *elimina
 {
 	FactorVarVector new_ass, ass;
 	FactorVarVector new_variables;
-	std::vector<int> new_values;
+	std::vector<double> new_values;
 
 	ass = variables;
 	FactorVarVector::iterator iter = std::find_if(ass.begin(), ass.end(), comp(eliminateVar->first));
@@ -162,7 +156,7 @@ MRFFactor MRFFactor::factorEliminationOperation(MRFFactor *a, FactorVar *elimina
 		return *a;
 	}
 
-	for(int i=0; i<variables.size(); i++)
+	for(unsigned int i=0; i<variables.size(); i++)
 	{
 		if(eliminateVar->first != variables[i].first)
 		{
@@ -170,19 +164,18 @@ MRFFactor MRFFactor::factorEliminationOperation(MRFFactor *a, FactorVar *elimina
 		}
 	}
 	unsigned int valSize=1;
-	for(int i=0;i<new_variables.size();i++)
+	for(unsigned int i=0;i<new_variables.size();i++)
 	{
 		valSize=valSize*new_variables[i].second;
 	}
 	new_values.resize(valSize,0);
 
 	MRFFactor newFactor(new_variables, new_values);
-	int sum=0;
-	for(int i=0;i<valSize;i++)
+	for(unsigned int i=0;i<valSize;i++)
 	{
 		new_ass = newFactor.getAssignment(i);
 
-		for(int j=0;j<ass.size();j++)
+		for(unsigned int j=0;j<ass.size();j++)
 		{
 			if(j<eliminateIndex)
 			{
@@ -207,12 +200,11 @@ MRFFactor MRFFactor::factorBinaryOperation(MRFFactor *a, MRFFactor *b, std::func
 		std::cerr << "Invalid B or A: " << std::endl;
 		return ret;
 	}
-
-	for(int i=0;i<a->variables.size();i++)
+	for(unsigned int i=0;i<a->variables.size();i++)
 	{
 		ret.variables.push_back(a->variables[i]);
 	}
-	for(int i=0;i<b->variables.size();i++)
+	for(unsigned int i=0;i<b->variables.size();i++)
 	{
 		if(std::find(ret.variables.begin(), ret.variables.end(), b->variables[i])==ret.variables.end())
 		{
@@ -220,7 +212,7 @@ MRFFactor MRFFactor::factorBinaryOperation(MRFFactor *a, MRFFactor *b, std::func
 		}
 	}
 	unsigned int valSize=1;
-	for(int i=0;i<ret.variables.size();i++)
+	for(unsigned int i=0;i<ret.variables.size();i++)
 	{
 		valSize=valSize*ret.variables[i].second;
 	}
@@ -229,10 +221,11 @@ MRFFactor MRFFactor::factorBinaryOperation(MRFFactor *a, MRFFactor *b, std::func
 	assB = b->variables;
 	assA = a->variables;
 	ret.values.resize(valSize, 0);
-	for(int i=0;i<valSize;i++)
+	for(unsigned int i=0;i<valSize;i++)
 	{
 		ass = ret.getAssignment(i);
-		for(int j=0; j<assB.size(); j++)
+
+		for(unsigned int j=0; j<assB.size(); j++)
 		{
 			FactorVarVector::iterator iter = std::find_if(ass.begin(), ass.end(), comp(assB[j].first));
 			if(iter != ass.end())
@@ -245,8 +238,8 @@ MRFFactor MRFFactor::factorBinaryOperation(MRFFactor *a, MRFFactor *b, std::func
 				return ret;
 			}
 		}
-
-		for(int j=0; j<assA.size(); j++)
+		
+		for(unsigned int j=0; j<assA.size(); j++)
 		{
 			FactorVarVector::iterator iter = std::find_if(ass.begin(), ass.end(), comp(assA[j].first));
 			if(iter != ass.end())
@@ -305,7 +298,7 @@ bool MarkovRandomField::loadInput()
 		{
 			factorNumber = std::stoi(line);
 
-			for(int i=0; i<factorNumber; i++)
+			for(unsigned int i=0; i<factorNumber; i++)
 			{
 
 				if(getline(inputFile,line))
@@ -313,7 +306,7 @@ bool MarkovRandomField::loadInput()
 					factorVar.clear();
 					factorVar = splitString(line, " ");
 					vd_vector.clear();
-					for(int j=0;j<factorVar.size();j++)
+					for(unsigned int j=0;j<factorVar.size();j++)
 					{
 						vp.name = factorVar[j];
 						alreadyThere = false;
@@ -336,9 +329,9 @@ bool MarkovRandomField::loadInput()
 						}
 					}
 					ep.weight = 1;
-					for(int j=0; j<vd_vector.size();j++)
+					for(unsigned int j=0; j<vd_vector.size();j++)
 					{
-						for(int k=j; k<vd_vector.size(); k++)
+						for(unsigned int k=j; k<vd_vector.size(); k++)
 						{
 							if(j!=k && !edge(vd_vector[j],vd_vector[k],MRFGraph).second)
 							{
