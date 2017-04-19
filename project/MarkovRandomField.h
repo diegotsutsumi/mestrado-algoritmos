@@ -35,6 +35,16 @@ public:
 		auto f = [](double a, double b){return a*b;};
 		return factorBinaryOperation(this, &b, f);
 	}
+	MRFFactor operator*(double b)
+	{
+		MRFFactor newFac(variables,values);
+
+		for(unsigned int i=0;i<values.size();i++)
+		{
+			newFac.values[i] = values[i]*b;
+		}
+		return newFac;
+	}
 	MRFFactor operator+(MRFFactor b)
 	{
 		auto f = [](double a, double b){return a+b;};
@@ -45,9 +55,16 @@ public:
 		auto f = [](double a, double b){return a-b;};
 		return factorBinaryOperation(this, &b, f);
 	}
+	MRFFactor operator/(double b)
+	{
+		MRFFactor newFac(variables,values);
 
-	//TODO Calculate Partition Function
-	//TODO Normalize
+		for(unsigned int i=0;i<values.size();i++)
+		{
+			newFac.values[i] = values[i]/b;
+		}
+		return newFac;
+	}
 
 	FactorVarVector getVariables();
 	double getValue(FactorVarVector assignment);
@@ -85,6 +102,8 @@ public:
 		variables = newFactor.variables;
 		values = newFactor.values;
 	}
+	double normalize();
+
 private:
 	FactorVarVector variables;
 	std::vector<double> values;

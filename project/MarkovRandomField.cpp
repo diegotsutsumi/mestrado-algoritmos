@@ -141,6 +141,29 @@ void MRFFactor::printFactor()
 	}
 }
 
+double MRFFactor::normalize()
+{
+	double partitionZ = 0;
+	double aux;
+
+	for(unsigned int i=0;i<values.size();i++)
+	{
+		aux = partitionZ + values[i];
+		if(aux < partitionZ)
+		{
+			std::cout << "Partition Function Overflow, diving factor by 2" << std::endl;
+			*this = *this/2;
+			i=0;
+			partitionZ = 0;
+			continue;
+		}
+		partitionZ += values[i];
+	}
+	*this = *this/partitionZ;
+
+	return partitionZ;
+}
+
 MRFFactor MRFFactor::factorEliminationOperation(MRFFactor *a, FactorVar *eliminateVar, std::function<int(MRFFactor*,FactorVarVector*,unsigned int,unsigned int,unsigned int)> operation)
 {
 	FactorVarVector new_ass, ass;
