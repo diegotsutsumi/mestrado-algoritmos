@@ -8,7 +8,7 @@
 #include <boost/graph/undirected_graph.hpp>// A subclass to provide reasonable arguments to adjacency_list for a typical undirected graph
 #include <boost/graph/graphviz.hpp>
 
-typedef std::pair<std::string, int> FactorVar;
+typedef std::pair<std::string, unsigned int> FactorVar;
 typedef std::vector<FactorVar> FactorVarVector;
 
 struct comp
@@ -66,12 +66,20 @@ public:
 		return newFac;
 	}
 
+	void setVariables(FactorVarVector _var);
 	FactorVarVector getVariables();
+
+	void setValues(std::vector<double> _val);
+	std::vector<double> getValues();
 	double getValue(FactorVarVector assignment);
 	double getValue(unsigned int idx);
 
 	FactorVarVector getAssignment(unsigned int idx);
 	unsigned int getIndex(FactorVarVector assign);
+
+	bool isValid();
+
+	void clear();
 
 	void printFactor();
 
@@ -108,7 +116,8 @@ private:
 	FactorVarVector variables;
 	std::vector<double> values;
 
-	bool is_valid();
+	bool is_valid;
+	void updateIsValid();
 
 	MRFFactor factorBinaryOperation(MRFFactor *a, MRFFactor *b, std::function<int(int,int)> operation);
 	MRFFactor factorEliminationOperation(MRFFactor *a, FactorVar *eliminateVar, std::function<int(MRFFactor*,FactorVarVector*,unsigned int,unsigned int,unsigned int)> operation);
@@ -137,6 +146,8 @@ public:
 	bool buildCliqueTree();
 	bool drawMRF();
 	bool drawCliqueTree();
+
+	void test();
 
 private:
 	Graph MRFGraph;

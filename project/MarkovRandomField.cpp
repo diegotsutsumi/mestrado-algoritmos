@@ -15,16 +15,20 @@ MRFFactor::MRFFactor(FactorVarVector var, std::vector<double> val)
 {
 	variables = var;
 	values = val;
-	if(!is_valid())
+	updateIsValid();
+	if(!is_valid)
 	{
 		std::cerr << "Invalid factor" << std::endl;
-		variables.clear();
-		values.clear();
 	}
 }
 
-bool MRFFactor::is_valid()
+void MRFFactor::updateIsValid()
 {
+	if(variables.size()==0 && values.size()==0)
+	{
+		is_valid = true;
+		return;
+	}
 	unsigned int valSize=1;
 	for(unsigned int i=0;i<variables.size();i++)
 	{
@@ -32,26 +36,80 @@ bool MRFFactor::is_valid()
 	}
 	if(values.size()!=valSize)
 	{
-		return false;
+		is_valid = false;
+		return;
 	}
-	return true;
+	is_valid = true;
+	return;
 }
 
+void MRFFactor::setVariables(FactorVarVector _var)
+{
+	variables = _var;
+	updateIsValid();
+}
 
 FactorVarVector MRFFactor::getVariables()
 {
 	return variables;
 }
 
-FactorVarVector MRFFactor::getAssignment(unsigned int idx)
+void MRFFactor::setValues(std::vector<double> _val)
 {
-	FactorVarVector assRet;
-	if(idx>=values.size())
+	values = _val;
+	updateIsValid();
+}
+
+double MRFFactor::getValue(FactorVarVector assignment)
+{
+	if(!is_valid)
 	{
-		return assRet;
+		throw std::runtime_error("Invalid Factor: getValue assignment");
 	}
 	
-	assRet = variables;
+	unsigned int idx;
+	try
+	{
+		idx = getIndex(assignment);
+	}
+	catch(std::invalid_argument& ia)
+	{
+		throw ia;
+	}
+
+	if(idx >= values.size())
+	{
+		throw std::out_of_range("Wrong assigment");
+	}
+	
+	return values[idx];
+}
+
+double MRFFactor::getValue(unsigned int idx)
+{
+	if(!is_valid)
+	{
+		throw std::runtime_error("Invalid Factor: getValue uint");
+	}
+	if(idx >= values.size())
+	{
+		throw std::out_of_range("Index out of range");
+	}
+	return values[idx];
+}
+
+FactorVarVector MRFFactor::getAssignment(unsigned int idx)
+{
+	if(!is_valid)
+	{
+		throw std::runtime_error("Invalid Factor: getAssignment");
+	}
+
+	if(idx>=values.size())
+	{
+		throw std::out_of_range("Input out of Range");
+	}
+	FactorVarVector assRet = variables;
 	unsigned int den;
 	for(unsigned int i=0;i<assRet.size();i++)
 	{
@@ -72,14 +130,14 @@ unsigned int MRFFactor::getIndex(FactorVarVector assign)
 
 	if(assign.size() != variables.size())
 	{
-		return -1;
+		throw std::invalid_argument("Bad variables size");
 	}
 
 	for(unsigned int i=0;i<variables.size();i++)
 	{
 		if(assign[i].first!=variables[i].first || assign[i].second>=variables[i].second)
 		{
-			return -1;
+			throw std::invalid_argument("Bad variables name or assignment value");
 		}
 	}
 
@@ -102,30 +160,26 @@ unsigned int MRFFactor::getIndex(FactorVarVector assign)
 	return retIdx;
 }
 
-double MRFFactor::getValue(FactorVarVector assignment)
+bool MRFFactor::isValid()
 {
-	unsigned int idx = getIndex(assignment);
-	if(idx >= values.size())
-	{
-		throw std::invalid_argument("Invalid Argument");
-	}
-	return values[idx];
+	return is_valid;
 }
 
-double MRFFactor::getValue(unsigned int idx)
+void MRFFactor::clear()
 {
-	if(idx >= values.size())
-	{
-		throw std::invalid_argument("Invalid Argument");
-	}
-	return values[idx];
+	variables.clear();
+	values.clear();
 }
 
 void MRFFactor::printFactor()
 {
+	if(!is_valid)
+	{
+		std::cout << "Invalid Factor Print" << std::endl;
+	}
 	for(int i=((int)(variables.size())-1);i>=0;i--)
 	{
-		std::cout << variables[i].first << " ";
+		std::cout << variables[i].first << "  ";
 	}
 	std::cout << std::endl;
 	FactorVarVector ass;
@@ -134,15 +188,25 @@ void MRFFactor::printFactor()
 		ass = getAssignment(i);
 		for(int j=((int)(ass.size())-1);j>=0;j--)
 		{
-			std::cout << ass[j].second << "     ";
+			std::cout << ass[j].second;
+			for(int k=0;k<(variables[j].first.size()-1);k++)
+			{
+				std::cout << " ";
+			}
+			std::cout << "  ";
 		}
-		std::cout << " | ";
+		std::cout << "   | ";
 		std::cout << getValue(i) << std::endl;
 	}
 }
 
 double MRFFactor::normalize()
 {
+	if(!is_valid)
+	{
+		return 0;
+	}
+
 	double partitionZ = 0;
 	double aux;
 
@@ -166,6 +230,12 @@ double MRFFactor::normalize()
 
 MRFFactor MRFFactor::factorEliminationOperation(MRFFactor *a, FactorVar *eliminateVar, std::function<int(MRFFactor*,FactorVarVector*,unsigned int,unsigned int,unsigned int)> operation)
 {
+	if(!a->isValid())
+	{
+		std::cerr << "Invalid factor factorEliminationOperation" << std::endl;
+		//Invalid Factor
+		return *a;
+	}
 	FactorVarVector new_ass, ass;
 	FactorVarVector new_variables;
 	std::vector<double> new_values;
@@ -196,7 +266,22 @@ MRFFactor MRFFactor::factorEliminationOperation(MRFFactor *a, FactorVar *elimina
 	MRFFactor newFactor(new_variables, new_values);
 	for(unsigned int i=0;i<valSize;i++)
 	{
-		new_ass = newFactor.getAssignment(i);
+		try
+		{
+			new_ass = newFactor.getAssignment(i);
+		}
+		catch (std::runtime_error& rte)
+		{
+			std::cerr << rte.what() << std::endl;
+			newFactor.clear();
+			break;
+		}
+		catch (std::out_of_range& oor)
+		{
+			std::cerr << oor.what() << std::endl;
+			newFactor.clear();
+			break;
+		}
 
 		for(unsigned int j=0;j<ass.size();j++)
 		{
@@ -218,7 +303,7 @@ MRFFactor MRFFactor::factorEliminationOperation(MRFFactor *a, FactorVar *elimina
 MRFFactor MRFFactor::factorBinaryOperation(MRFFactor *a, MRFFactor *b, std::function<int(int,int)> operation)
 {
 	MRFFactor ret;
-	if(!a->is_valid() || !b->is_valid())
+	if(!a->is_valid || !b->is_valid)
 	{
 		std::cerr << "Invalid B or A: " << std::endl;
 		return ret;
@@ -244,9 +329,25 @@ MRFFactor MRFFactor::factorBinaryOperation(MRFFactor *a, MRFFactor *b, std::func
 	assB = b->variables;
 	assA = a->variables;
 	ret.values.resize(valSize, 0);
+	ret.updateIsValid();
 	for(unsigned int i=0;i<valSize;i++)
 	{
-		ass = ret.getAssignment(i);
+		try
+		{
+			ass = ret.getAssignment(i);			
+		}
+		catch (std::runtime_error& rte)
+		{
+			std::cerr << rte.what() << std::endl;
+			ret.clear();
+			break;
+		}
+		catch (std::out_of_range& oor)
+		{
+			std::cerr << oor.what() << std::endl;
+			ret.clear();
+			break;
+		}
 
 		for(unsigned int j=0; j<assB.size(); j++)
 		{
@@ -257,7 +358,8 @@ MRFFactor MRFFactor::factorBinaryOperation(MRFFactor *a, MRFFactor *b, std::func
 			}
 			else
 			{
-				std::cerr << "ERROR, should never end up here" << std::endl;
+				std::cerr << "ERROR! Variable B not found" << std::endl;
+				ret.clear();
 				return ret;
 			}
 		}
@@ -271,12 +373,38 @@ MRFFactor MRFFactor::factorBinaryOperation(MRFFactor *a, MRFFactor *b, std::func
 			}
 			else
 			{
-				std::cerr << "ERROR, should never end up here" << std::endl;
+				std::cerr << "ERROR! Variable A not found" << std::endl;
+				ret.clear();
 				return ret;
 			}
 		}
-		ret.values[i] = operation(b->getValue(assB),a->getValue(assA));
+
+		try
+		{
+			double aValue = a->getValue(assA);
+			double bValue = b->getValue(assB);
+			ret.values[i] = operation(bValue,aValue);
+		}
+		catch (std::invalid_argument& ia)
+		{
+			std::cerr << ia.what() << std::endl;
+			ret.clear();
+			break;
+		}
+		catch (std::runtime_error& rte)
+		{
+			std::cerr << rte.what() << std::endl;
+			ret.clear();
+			break;
+		}
+		catch (std::out_of_range& oor)
+		{
+			std::cerr << oor.what() << std::endl;
+			ret.clear();
+			break;
+		}
 	}
+	ret.updateIsValid();
 	return ret;
 }
 MarkovRandomField::MarkovRandomField(std::string _inputPath)
@@ -285,7 +413,9 @@ MarkovRandomField::MarkovRandomField(std::string _inputPath)
 
 	if(!loadInput())
 	{
-		throw std::runtime_error("Invalid Input");
+		MRFGraph.clear();
+		CliqueTree.clear();
+		Factors.clear();
 	}
 }
 
@@ -314,6 +444,10 @@ bool MarkovRandomField::loadInput()
 	std::pair<VertexIterator,VertexIterator> vertices;
 	bool alreadyThere;
 
+	std::vector<MRFFactor> factors;
+	std::vector<double> values;
+	MRFFactor toBePushed;
+
 	if (inputFile.is_open())
 	{
 		getline(inputFile,line);
@@ -323,15 +457,22 @@ bool MarkovRandomField::loadInput()
 
 			for(unsigned int i=0; i<factorNumber; i++)
 			{
-
 				if(getline(inputFile,line))
 				{
 					factorVar.clear();
 					factorVar = splitString(line, " ");
+
 					vd_vector.clear();
+					std::vector<std::string> facSplit;
+					FactorVarVector mrff;
 					for(unsigned int j=0;j<factorVar.size();j++)
 					{
-						vp.name = factorVar[j];
+						facSplit.clear();
+						facSplit = splitString(factorVar[j], "|");
+
+						mrff.push_back(std::make_pair(facSplit[0],std::stoi(facSplit[1])));
+
+						vp.name = facSplit[0];
 						alreadyThere = false;
 						for (vertices = boost::vertices(MRFGraph); vertices.first != vertices.second; ++vertices.first)
 						{
@@ -351,6 +492,8 @@ bool MarkovRandomField::loadInput()
 							vd_vector.push_back(*vertices.first);
 						}
 					}
+					toBePushed.setVariables(mrff);
+					factors.push_back(toBePushed);
 					ep.weight = 1;
 					for(unsigned int j=0; j<vd_vector.size();j++)
 					{
@@ -365,13 +508,38 @@ bool MarkovRandomField::loadInput()
 				}
 				else
 				{
-					throw std::runtime_error("invalid input");
+					throw std::runtime_error("Wrong number of Factor Variable Lines");
 				}
 			}
+
+			for(unsigned int i=0; i<factorNumber; i++)
+			{
+				if(getline(inputFile,line))
+				{
+					factorVar.clear();
+					factorVar = splitString(line, " ");
+
+					values.clear();
+					for(unsigned int j=0;j<factorVar.size();j++)
+					{
+						values.push_back(std::stod(factorVar[j]));
+					}
+					factors[i].setValues(values);
+					if(!factors[i].isValid())
+					{
+						throw std::runtime_error("Probably mismatched variables / values sizes");
+					}
+				}
+				else
+				{
+					throw std::runtime_error("Wrong number of Factor Value Lines");
+				}
+			}
+			Factors = factors;
 		}
 		catch (const std::invalid_argument& ia)
 		{
-			std::cerr << "Invalid argument STOI Invalid Input File: " << ia.what() << std::endl;
+			std::cerr << "Invalid argument: " << ia.what() << std::endl;
 			inputFile.close();
 			return false;
 		}
@@ -386,6 +554,7 @@ bool MarkovRandomField::loadInput()
 	else
 	{
 		std::cerr << "Could not ope file" << std::endl;
+		return false;
 	}
 	return true;
 }
@@ -420,4 +589,20 @@ std::vector<std::string> MarkovRandomField::splitString(std::string str, std::st
 	}
 
 	return parts;
+}
+
+void MarkovRandomField::test()
+{
+	MRFFactor newFactor;
+	int i=0;
+	for(i=0,newFactor=Factors[0];i<Factors.size();i++)
+	{
+		Factors[i].printFactor();
+		if(i+1<Factors.size())
+		{
+			newFactor = newFactor*Factors[i+1];
+		}
+	}
+	newFactor.normalize();
+	newFactor.printFactor();
 }
