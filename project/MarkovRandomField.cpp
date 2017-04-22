@@ -72,6 +72,7 @@ bool MarkovRandomField::loadInput()
 
 						vp.name = facSplit[0];
 						alreadyThere = false;
+						unsigned int k=0;
 						for (vertices = boost::vertices(mrfgraph); vertices.first != vertices.second; ++vertices.first)
 						{
 							if(mrfgraph[*vertices.first].name == vp.name)
@@ -79,18 +80,22 @@ bool MarkovRandomField::loadInput()
 								alreadyThere = true;
 								break;
 							}
+							k++;
 						}
   
 						if(!alreadyThere)
 						{
 							vd_vector.push_back(mrfgraph.add_vertex(vp));
-							mrf_variables.push_back(std::make_pair(facSplit[0],std::stoi(facSplit[1])));
+							std::vector<unsigned int> mrfV = {i};
+							mrf_variables.push_back(std::make_pair(std::make_pair(facSplit[0],std::stoi(facSplit[1])),mrfV));
 						}
 						else
 						{
 							vd_vector.push_back(*vertices.first);
+							(mrf_variables[k].second).push_back(i);
 						}
 					}
+
 					toBePushed.setVariables(mrff);
 					toBePushed.setCounter(&counter);
 					factors_aux.push_back(toBePushed);
@@ -198,7 +203,6 @@ Factor MarkovRandomField::dumbQuery(std::vector<std::string> * query)
 	unsigned int i=0;
 	for(i=0,newFactor=factors[0];i<factors.size();i++)
 	{
-		factors[i].printFactor();
 		if(i+1<factors.size())
 		{
 			newFactor = newFactor*factors[i+1];
@@ -207,9 +211,9 @@ Factor MarkovRandomField::dumbQuery(std::vector<std::string> * query)
 
 	for(i=0;i<mrf_variables.size();i++)
 	{
-		if(std::find(query->begin(), query->end(), mrf_variables[i].first)==query->end())
+		if(std::find(query->begin(), query->end(), ((mrf_variables[i]).first).first)==query->end())
 		{
-			newFactor.marginalize(mrf_variables[i]);
+			newFactor.marginalize(mrf_variables[i].first);
 		}
 	}
 	newFactor.normalize();
@@ -217,12 +221,119 @@ Factor MarkovRandomField::dumbQuery(std::vector<std::string> * query)
 	return newFactor;
 }
 
+Factor MarkovRandomField::variableEliminationQuery(std::vector<std::string> * query)
+{
+	std::deque<std::pair<FactorVar,std::vector<unsigned int>>> mrfVar;
+	std::pair<FactorVar,std::vector<unsigned int>> margVar;
+
+	for(unsigned int i=0;i<mrf_variables.size();i++)
+	{
+		if(std::find(query->begin(), query->end(), ((mrf_variables[i]).first).first)==query->end())
+		{
+			mrfVar.push_back(mrf_variables[i]);
+		}
+	}
+
+	std::sort(mrfVar.begin(),mrfVar.end(),mrfVarComp());
+
+	Factor newFactor;
+	std::vector<Factor> newFactors = factors;
+	newFactor.setCounter(&counter);
+	std::vector<unsigned int> multFactorsVector;
+
+	newFactors.push_back(newFactor);
+	unsigned int newFacIdx = newFactors.size()-1;
+
+	while(!mrfVar.empty())
+	{
+		unsigned int j;
+		margVar = mrfVar.front();
+		mrfVar.pop_front();
+
+		multFactorsVector.clear();
+		for(j=0,newFactor=newFactors[(margVar.second)[0]];(j+1)<(margVar.second).size();j++)
+		{
+			if(j==0)
+			{
+				multFactorsVector.push_back((margVar.second)[0]);
+				multFactorsVector.push_back((margVar.second)[1]);
+			}
+			else
+			{
+				multFactorsVector.push_back((margVar.second)[j+1]);
+			}
+			newFactor = newFactor * newFactors[(margVar.second)[j+1]];
+		}
+
+		newFactor.marginalize(margVar.first);
+		newFactors[newFacIdx] = newFactor;
+
+
+		/*Cutting unecessary paths*/
+		FactorVarVector multFactorVars;
+		FactorVarVector eachFactorVars;
+		for(j=0;j<multFactorsVector.size();j++)
+		{
+			eachFactorVars = newFactors[multFactorsVector[j]].getVariables();
+			for(unsigned int k=0;k<eachFactorVars.size();k++)
+			{
+				if(std::find(multFactorVars.begin(),multFactorVars.end(),eachFactorVars[k])==multFactorVars.end())
+				{
+					multFactorVars.push_back(eachFactorVars[k]);
+				}
+			}
+		}
+
+		for(j=0;j<multFactorVars.size();j++)
+		{
+			for(unsigned int k=0; k<mrfVar.size(); k++)
+			{
+				if(multFactorVars[j].first == (mrfVar[k].first).first)
+				{
+					bool firstGone = false;
+					for(unsigned int l=0;l<multFactorsVector.size();l++)
+					{
+						std::vector<unsigned int>::iterator iter;
+						iter = std::find((mrfVar[k].second).begin(), (mrfVar[k].second).end(), multFactorsVector[l]);
+						if(iter!=(mrfVar[k].second).end())
+						{
+							if(firstGone)
+							{
+								(mrfVar[k].second).erase( std::remove( (mrfVar[k].second).begin(), (mrfVar[k].second).end(), multFactorsVector[l] ), (mrfVar[k].second).end() );
+							}
+							else
+							{
+								*iter = newFacIdx;
+								firstGone = true;
+							}
+						}
+					}
+				}
+			}
+		}
+		std::sort(mrfVar.begin(),mrfVar.end(),mrfVarComp());
+	}
+
+	std::cout << "Number of Operations: " << counter << std::endl;
+	newFactor.normalize();
+	return newFactor;
+}
+
+void MarkovRandomField::clearOpCounter()
+{
+	counter=0;
+}
+
 void MarkovRandomField::test()
 {
 	std::vector<std::string> asking = {"PG"};
-	Factor queryFac = query(&asking);
-
+	Factor queryFac = dumbQuery(&asking);
 	queryFac.printFactor();
+	
+	clearOpCounter();
+	queryFac = variableEliminationQuery(&asking);
+	queryFac.printFactor();
+
 
 	/*Factor newFactor;
 	int i=0;
@@ -240,5 +351,6 @@ void MarkovRandomField::test()
 
 Factor MarkovRandomField::query(std::vector<std::string> * query)
 {
-	return dumbQuery(query);
+	//return dumbQuery(query);
+	return variableEliminationQuery(query);
 }

@@ -23,6 +23,14 @@ typedef boost::undirected_graph<VertexProperty, EdgeProperty> Graph;
 typedef boost::graph_traits<Graph>::vertex_descriptor VertexDescriptor;
 typedef boost::graph_traits<Graph>::vertex_iterator VertexIterator;
 
+struct mrfVarComp
+{
+    inline bool operator() (const std::pair<FactorVar,std::vector<unsigned int>>& elem1, const std::pair<FactorVar,std::vector<unsigned int>>& elem2)
+    {
+        return ((elem1.second).size() < (elem2.second).size());
+    }
+};
+
 class MarkovRandomField
 {
 public:
@@ -30,6 +38,7 @@ public:
 	~MarkovRandomField();
 
 	Factor query(std::vector<std::string> * query);
+	void clearOpCounter();
 
 	bool buildcliquetree();
 	bool drawMRF();
@@ -42,13 +51,15 @@ private:
 	Graph mrfgraph;
 	Graph cliquetree;
 	std::vector<Factor> factors;
-	std::vector<FactorVar> mrf_variables;
+
+	std::vector<std::pair<FactorVar,std::vector<unsigned int>>> mrf_variables;
 
 	std::string inputPath;
 	bool loadInput();
 	std::vector<std::string> splitString(std::string str, std::string delimiter);
 
 	Factor dumbQuery(std::vector<std::string> * query);
+	Factor variableEliminationQuery(std::vector<std::string> * query);
 	unsigned int counter;
 };
 
