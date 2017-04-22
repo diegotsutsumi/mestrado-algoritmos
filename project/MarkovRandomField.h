@@ -3,125 +3,11 @@
 
 #include <string>
 #include <vector>
-#include <algorithm>
 
-#include <boost/graph/undirected_graph.hpp>// A subclass to provide reasonable arguments to adjacency_list for a typical undirected graph
+#include <boost/graph/undirected_graph.hpp> 
 #include <boost/graph/graphviz.hpp>
 
-typedef std::pair<std::string, unsigned int> FactorVar;
-typedef std::vector<FactorVar> FactorVarVector;
-
-struct comp
-{
-	comp(std::string const& s) : _s(s) { }
-
-	bool operator () (FactorVar const& p)
-	{
-		return (p.first == _s);
-	}
-
-	std::string _s;
-};
-
-class MRFFactor
-{
-public:
-	MRFFactor();
-	MRFFactor(FactorVarVector var, std::vector<double> val);
-	~MRFFactor();
-
-	MRFFactor operator*(MRFFactor b)
-	{
-		auto f = [](double a, double b){return a*b;};
-		return factorBinaryOperation(this, &b, f);
-	}
-	MRFFactor operator*(double b)
-	{
-		MRFFactor newFac(variables,values);
-
-		for(unsigned int i=0;i<values.size();i++)
-		{
-			newFac.values[i] = values[i]*b;
-		}
-		return newFac;
-	}
-	MRFFactor operator+(MRFFactor b)
-	{
-		auto f = [](double a, double b){return a+b;};
-		return factorBinaryOperation(this, &b, f);
-	}
-	MRFFactor operator-(MRFFactor b)
-	{
-		auto f = [](double a, double b){return a-b;};
-		return factorBinaryOperation(this, &b, f);
-	}
-	MRFFactor operator/(double b)
-	{
-		MRFFactor newFac(variables,values);
-
-		for(unsigned int i=0;i<values.size();i++)
-		{
-			newFac.values[i] = values[i]/b;
-		}
-		return newFac;
-	}
-
-	void setVariables(FactorVarVector _var);
-	FactorVarVector getVariables();
-
-	void setValues(std::vector<double> _val);
-	std::vector<double> getValues();
-	double getValue(FactorVarVector assignment);
-	double getValue(unsigned int idx);
-
-	FactorVarVector getAssignment(unsigned int idx);
-	unsigned int getIndex(FactorVarVector assign);
-
-	bool isValid();
-
-	void clear();
-
-	void printFactor();
-
-	void marginalize(FactorVar margVar)
-	{
-		MRFFactor newFactor = factorEliminationOperation(this,&margVar,
-								[](MRFFactor *_this, FactorVarVector *ass,unsigned int elim_index, unsigned int elim_card, unsigned int elim_ass)
-								{
-									double sum=0;
-									for(unsigned int j=0;j<elim_card;j++)
-									{
-										(*ass)[elim_index].second = j;
-										sum = sum + _this->getValue(*ass);
-									}
-									return sum;
-								});
-		variables = newFactor.variables;
-		values = newFactor.values;
-	}
-	void reduce(FactorVar reductionVar)
-	{
-		MRFFactor newFactor = factorEliminationOperation(this,&reductionVar,
-								[](MRFFactor *_this, FactorVarVector *ass,unsigned int elim_index, unsigned int elim_card, unsigned int elim_ass)
-								{
-									(*ass)[elim_index].second = elim_ass;
-									return _this->getValue(*ass);
-								});
-		variables = newFactor.variables;
-		values = newFactor.values;
-	}
-	double normalize();
-
-private:
-	FactorVarVector variables;
-	std::vector<double> values;
-
-	bool is_valid;
-	void updateIsValid();
-
-	MRFFactor factorBinaryOperation(MRFFactor *a, MRFFactor *b, std::function<int(int,int)> operation);
-	MRFFactor factorEliminationOperation(MRFFactor *a, FactorVar *eliminateVar, std::function<int(MRFFactor*,FactorVarVector*,unsigned int,unsigned int,unsigned int)> operation);
-};
+#include "Factor.h"
 
 struct EdgeProperty
 {
@@ -143,20 +29,27 @@ public:
 	MarkovRandomField(std::string _inputPath);
 	~MarkovRandomField();
 
-	bool buildCliqueTree();
+	Factor query(std::vector<std::string> * query);
+
+	bool buildcliquetree();
 	bool drawMRF();
-	bool drawCliqueTree();
+	bool drawcliquetree();
 
 	void test();
 
 private:
-	Graph MRFGraph;
-	Graph CliqueTree;
-	std::vector<MRFFactor> Factors;
+	unsigned int operationsCounter;
+	Graph mrfgraph;
+	Graph cliquetree;
+	std::vector<Factor> factors;
+	std::vector<FactorVar> mrf_variables;
 
 	std::string inputPath;
 	bool loadInput();
 	std::vector<std::string> splitString(std::string str, std::string delimiter);
+
+	Factor dumbQuery(std::vector<std::string> * query);
+	unsigned int counter;
 };
 
 #endif

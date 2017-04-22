@@ -3,7 +3,7 @@ exec: cliquetree
 debug: CXXFLAGS += -g -ggdb -O0 -Wall
 debug: exec
 
-clique_tree_objects = clique_tree.o MarkovRandomField.o
+clique_tree_objects = clique_tree.o MarkovRandomField.o Factor.o
 
 all : exec
 
@@ -11,6 +11,7 @@ cliquetree: $(clique_tree_objects)
 	g++ -o clique_tree $(clique_tree_objects)
 
 clique_tree: clique_tree.cpp
+Factor: Factor.cpp
 MarkovRandomField: MarkovRandomField.cpp
 
 clean:
