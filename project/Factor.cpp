@@ -191,7 +191,7 @@ void Factor::printFactor()
 		for(int j=((int)(ass.size())-1);j>=0;j--)
 		{
 			std::cout << ass[j].second;
-			for(int k=0;k<(variables[j].first.size()-1);k++)
+			for(int k=0;k<((int)(variables[j].first.size())-1);k++)
 			{
 				std::cout << " ";
 			}
@@ -210,19 +210,20 @@ double Factor::normalize()
 	}
 
 	double partitionZ = 0;
-	double aux;
+	//double aux;
 
 	for(unsigned int i=0;i<values.size();i++)
 	{
-		aux = partitionZ + values[i];
+		/*aux = partitionZ + values[i];
 		if(aux < partitionZ)
 		{
 			std::cout << "Partition Function Overflow, diving factor by 2" << std::endl;
 			*this = *this/2;
 			i=0;
 			partitionZ = 0;
+			aux = 0;
 			continue;
-		}
+		}*/
 		partitionZ += values[i];
 		(*operationsCounter)++;
 	}
