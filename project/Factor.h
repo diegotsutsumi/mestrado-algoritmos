@@ -39,7 +39,6 @@ public:
 		for(unsigned int i=0;i<values.size();i++)
 		{
 			(*operationsCounter)++;
-			std::cout << "Multiplying" << std::endl;
 			newFac.values[i] = values[i]*b;
 		}
 		return newFac;
@@ -54,6 +53,9 @@ public:
 		auto f = [](double a, double b){return a-b;};
 		return factorBinaryOperation(this, &b, f);
 	}
+
+	/*Implement Factor Division by Another Factor*/
+
 	Factor operator/(double b)
 	{
 		Factor newFac(variables,values);

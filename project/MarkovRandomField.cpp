@@ -169,7 +169,7 @@ bool MarkovRandomField::drawMRF()
 	std::ofstream dotfile("MRF.dot");
 	write_graphviz (dotfile, mrfgraph, boost::make_label_writer(boost::get(&VertexProperty::name, mrfgraph)),boost::make_label_writer(boost::get(&EdgeProperty::weight, mrfgraph)));
 	system("dot -Tpng MRF.dot -o MRF.png");
-	ulink("MRF.dot");
+	unlink("MRF.dot");
 	return true;
 }
 
