@@ -168,7 +168,10 @@ bool MarkovRandomField::drawMRF()
 {
 	std::ofstream dotfile("MRF.dot");
 	write_graphviz (dotfile, mrfgraph, boost::make_label_writer(boost::get(&VertexProperty::name, mrfgraph)),boost::make_label_writer(boost::get(&EdgeProperty::weight, mrfgraph)));
-	system("dot -Tpng MRF.dot -o MRF.png");
+	if(system("dot -Tpng MRF.dot -o MRF.png"))
+	{
+		std::cerr << "Error calling Graphviz" << std::endl;
+	}
 	unlink("MRF.dot");
 	return true;
 }
@@ -236,8 +239,6 @@ Factor MarkovRandomField::variableEliminationQuery(std::vector<std::string> * qu
 		}
 	}
 
-	std::sort(mrfVar.begin(),mrfVar.end(),mrfVarComp());
-
 	Factor newFactor;
 	std::vector<Factor> newFactors = factors;
 	newFactor.setCounter(&counter);
@@ -248,10 +249,15 @@ Factor MarkovRandomField::variableEliminationQuery(std::vector<std::string> * qu
 	while(!mrfVar.empty())
 	{
 		unsigned int j;
+		
+		//std::sort(mrfVar.begin(),mrfVar.end(),mrfFacNumVarComp());
+		std::sort(mrfVar.begin(),mrfVar.end(),mrfNeighbVarComp(&newFactors));
+		//std::sort(mrfVar.begin(),mrfVar.end(),mrfNeighbCardVarComp(&newFactors));
+		
 		margVar = mrfVar.front();
 		mrfVar.pop_front();
-
 		multFactorsVector.clear();
+		std::cout << margVar.first.first << " ";
 		for(j=0,newFactor=newFactors[(margVar.second)[0]];(j+1)<(margVar.second).size();j++)
 		{
 			if(j==0)
@@ -265,6 +271,10 @@ Factor MarkovRandomField::variableEliminationQuery(std::vector<std::string> * qu
 			}
 			newFactor = newFactor * newFactors[(margVar.second)[j+1]];
 		}
+		if(multFactorsVector.size()==0 && (margVar.second).size()>0)
+		{
+			multFactorsVector.push_back((margVar.second)[0]);
+		}
 
 		std::sort(multFactorsVector.begin(),multFactorsVector.end());
 
@@ -274,6 +284,7 @@ Factor MarkovRandomField::variableEliminationQuery(std::vector<std::string> * qu
 		{
 			newFactors.erase(newFactors.begin()+multFactorsVector[intJ]);
 		}
+		//newFactor.normalize();
 		newFactors.push_back(newFactor);
 		newFactors.shrink_to_fit();
 		newFacIdx = newFactors.size() - 1;
@@ -314,8 +325,8 @@ Factor MarkovRandomField::variableEliminationQuery(std::vector<std::string> * qu
 			}
 			(mrfVar[j].second).shrink_to_fit();
 		}
-		std::sort(mrfVar.begin(),mrfVar.end(),mrfVarComp());
 	}
+	std::cout << std::endl;
 	
 	newFactor=newFactors[0];
 	for(unsigned int i=0;(i+1)<newFactors.size();i++)
@@ -334,7 +345,7 @@ void MarkovRandomField::clearOpCounter()
 
 void MarkovRandomField::test()
 {
-	std::vector<std::string> asking = {"CM","CA"};
+	std::vector<std::string> asking = {"Joao"};
 	Factor queryFac = dumbQuery(&asking);
 	queryFac.printFactor();
 	

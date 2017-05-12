@@ -232,7 +232,7 @@ double Factor::normalize()
 	return partitionZ;
 }
 
-Factor Factor::factorEliminationOperation(Factor *a, FactorVar *eliminateVar, std::function<int(Factor*,FactorVarVector*,unsigned int,unsigned int,unsigned int)> operation)
+Factor Factor::factorEliminationOperation(Factor *a, FactorVar *eliminateVar, std::function<double(Factor*,FactorVarVector*,unsigned int,unsigned int,unsigned int)> operation)
 {
 	if(!a->isValid())
 	{
@@ -304,7 +304,7 @@ Factor Factor::factorEliminationOperation(Factor *a, FactorVar *eliminateVar, st
 	return newFactor;
 }
 
-Factor Factor::factorBinaryOperation(Factor *a, Factor *b, std::function<int(int,int)> operation)
+Factor Factor::factorBinaryOperation(Factor *a, Factor *b, std::function<double(double,double)> operation)
 {
 	Factor ret;
 	if(!a->is_valid || !b->is_valid)

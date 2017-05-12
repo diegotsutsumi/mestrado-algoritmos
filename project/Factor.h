@@ -29,7 +29,7 @@ public:
 
 	Factor operator*(Factor b)
 	{
-		auto f = [](double a, double b){return a*b;};
+		auto f = [](double a, double b){return (double)(a*b);};
 		return factorBinaryOperation(this, &b, f);
 	}
 	Factor operator*(double b)
@@ -39,18 +39,18 @@ public:
 		for(unsigned int i=0;i<values.size();i++)
 		{
 			(*operationsCounter)++;
-			newFac.values[i] = values[i]*b;
+			newFac.values[i] = (double)(values[i]*b);
 		}
 		return newFac;
 	}
 	Factor operator+(Factor b)
 	{
-		auto f = [](double a, double b){return a+b;};
+		auto f = [](double a, double b){return (double)(a+b);};
 		return factorBinaryOperation(this, &b, f);
 	}
 	Factor operator-(Factor b)
 	{
-		auto f = [](double a, double b){return a-b;};
+		auto f = [](double a, double b){return (double)(a-b);};
 		return factorBinaryOperation(this, &b, f);
 	}
 
@@ -63,7 +63,7 @@ public:
 		for(unsigned int i=0;i<values.size();i++)
 		{
 			(*operationsCounter)++;
-			newFac.values[i] = values[i]/b;
+			newFac.values[i] = (double)(values[i]/b);
 		}
 		return newFac;
 	}
@@ -125,8 +125,8 @@ private:
 	bool is_valid;
 	void updateIsValid();
 
-	Factor factorBinaryOperation(Factor *a, Factor *b, std::function<int(int,int)> operation);
-	Factor factorEliminationOperation(Factor *a, FactorVar *eliminateVar, std::function<int(Factor*,FactorVarVector*,unsigned int,unsigned int,unsigned int)> operation);
+	Factor factorBinaryOperation(Factor *a, Factor *b, std::function<double(double,double)> operation);
+	Factor factorEliminationOperation(Factor *a, FactorVar *eliminateVar, std::function<double(Factor*,FactorVarVector*,unsigned int,unsigned int,unsigned int)> operation);
 };
 
 #endif
