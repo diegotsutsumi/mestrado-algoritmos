@@ -22,6 +22,7 @@ struct VertexProperty
 typedef boost::undirected_graph<VertexProperty, EdgeProperty> Graph;
 typedef boost::graph_traits<Graph>::vertex_descriptor VertexDescriptor;
 typedef boost::graph_traits<Graph>::vertex_iterator VertexIterator;
+typedef boost::graph_traits<Graph>::adjacency_iterator AdjacencyIterator;
 
 struct mrfFacNumVarComp
 {
@@ -37,15 +38,26 @@ struct mrfNeighbVarComp
 	inline bool operator() (const std::pair<FactorVar,std::vector<unsigned int>>& elem1, const std::pair<FactorVar,std::vector<unsigned int>>& elem2)
 	{
 		unsigned int elem1Neighb=0, elem2Neighb=0;
+		FactorVarVector facVec, auxFacVec;
+		facVec.clear();
 		for(unsigned int i=0;i<elem1.second.size();i++)
 		{
-			elem1Neighb += ((*vecFac)[i].getVariables().size()-1);
+			auxFacVec = (*vecFac)[elem1.second[i]].getVariables();
+			facVec.insert(facVec.end(), auxFacVec.begin(), auxFacVec.end());
 		}
+		std::sort(facVec.begin(), facVec.end());
+		facVec.erase(std::unique(facVec.begin(), facVec.end()), facVec.end());
+		elem1Neighb = facVec.size() - 1;
+		facVec.clear();
+
 		for(unsigned int i=0;i<elem2.second.size();i++)
 		{
-			elem2Neighb += ((*vecFac)[2].getVariables().size()-1);
+			auxFacVec = (*vecFac)[elem2.second[i]].getVariables();
+			facVec.insert(facVec.end(), auxFacVec.begin(), auxFacVec.end());
 		}
-
+		std::sort(facVec.begin(), facVec.end());
+		facVec.erase(std::unique(facVec.begin(), facVec.end()), facVec.end());
+		elem2Neighb = facVec.size() - 1;
 		return (elem1Neighb < elem2Neighb);
 	}
 	std::vector<Factor> * vecFac;
@@ -56,31 +68,35 @@ struct mrfNeighbCardVarComp
 	mrfNeighbCardVarComp(std::vector<Factor> * _vecFac) : vecFac(_vecFac){};
 	inline bool operator() (const std::pair<FactorVar,std::vector<unsigned int>>& elem1, const std::pair<FactorVar,std::vector<unsigned int>>& elem2)
 	{
-		unsigned int elem1Weight=1, elem2Weight=1;
-		for(unsigned int i=0;i<(elem1.second).size();i++)
+		unsigned int elem1Neighb=1, elem2Neighb=1;
+		FactorVarVector facVec, auxFacVec;
+		facVec.clear();
+		for(unsigned int i=0;i<elem1.second.size();i++)
 		{
-			FactorVarVector facs = (*vecFac)[(elem1.second)[i]].getVariables();
-			for(unsigned int j=0;j<facs.size();j++)
-			{
-				if(facs[j].first != elem1.first.first)
-				{
-					elem1Weight *= facs[j].second;
-				}
-			}
+			auxFacVec = (*vecFac)[elem1.second[i]].getVariables();
+			facVec.insert(facVec.end(), auxFacVec.begin(), auxFacVec.end());
 		}
+		std::sort(facVec.begin(), facVec.end());
+		facVec.erase(std::unique(facVec.begin(), facVec.end()), facVec.end());
+		for(unsigned int i=0;i<facVec.size();i++)
+		{
+			elem1Neighb *= facVec[i].second;
+		}
+		
+		facVec.clear();
 		for(unsigned int i=0;i<elem2.second.size();i++)
 		{
-
-			FactorVarVector facs = (*vecFac)[(elem2.second)[i]].getVariables();
-			for(unsigned int j=0;j<facs.size();j++)
-			{
-				if(facs[j].first != elem2.first.first)
-				{
-					elem2Weight *= facs[j].second;
-				}
-			}
+			auxFacVec = (*vecFac)[elem2.second[i]].getVariables();
+			facVec.insert(facVec.end(), auxFacVec.begin(), auxFacVec.end());
 		}
-		return (elem1Weight < elem2Weight);
+		std::sort(facVec.begin(), facVec.end());
+		facVec.erase(std::unique(facVec.begin(), facVec.end()), facVec.end());
+		for(unsigned int i=0;i<facVec.size();i++)
+		{
+			elem2Neighb *= facVec[i].second;
+		}
+
+		return (elem1Neighb < elem2Neighb);
 	}
 	std::vector<Factor> * vecFac;
 };
@@ -94,11 +110,12 @@ public:
 	Factor query(std::vector<std::string> * query);
 	void clearOpCounter();
 
-	bool buildcliquetree();
+	bool buildCliqueTree();
 	bool drawMRF();
-	bool drawcliquetree();
+	bool drawCliqueTree();
+	
 
-	void test();
+	void run();
 
 private:
 	unsigned int operationsCounter;
@@ -111,9 +128,12 @@ private:
 	std::string inputPath;
 	bool loadInput();
 	std::vector<std::string> splitString(std::string str, std::string delimiter);
+	bool draw(Graph inGraph, std::string name);
 
 	Factor dumbQuery(std::vector<std::string> * query);
-	Factor variableEliminationQuery(std::vector<std::string> * query);
+	Factor variableEliminationQuery(std::vector<std::string> * query, std::string heuristics_type);
+
+	Graph triangulateGraph(Graph inGraph);
 	unsigned int counter;
 };
 

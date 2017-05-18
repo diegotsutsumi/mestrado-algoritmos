@@ -4,9 +4,9 @@
  
 int main(int,char*[])
 {
-	MarkovRandomField mrf("input2.mrf");
+	MarkovRandomField mrf("input3.mrf");
 
-	mrf.test();
+	mrf.run();
 	mrf.drawMRF();
   	return 0;
 }

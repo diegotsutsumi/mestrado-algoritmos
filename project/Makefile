@@ -1,6 +1,6 @@
-CXXFLAGS += -std=c++11 -O3 -Wall
+CXXFLAGS += -std=c++11 -Wall -03
 exec: cliquetree
-debug: CXXFLAGS += -g -ggdb -O0 -Wall
+debug: CXXFLAGS += -g -ggdb -O0
 debug: exec
 
 clique_tree_objects = clique_tree.o MarkovRandomField.o Factor.o

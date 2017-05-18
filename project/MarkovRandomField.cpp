@@ -166,16 +166,26 @@ bool MarkovRandomField::loadInput()
 
 bool MarkovRandomField::drawMRF()
 {
-	std::ofstream dotfile("MRF.dot");
-	write_graphviz (dotfile, mrfgraph, boost::make_label_writer(boost::get(&VertexProperty::name, mrfgraph)),boost::make_label_writer(boost::get(&EdgeProperty::weight, mrfgraph)));
-	if(system("dot -Tpng MRF.dot -o MRF.png"))
+	return draw(mrfgraph,"MRF");
+}
+bool MarkovRandomField::drawCliqueTree()
+{
+	return draw(cliquetree,"CliqueTree");
+}
+bool MarkovRandomField::draw(Graph inGraph, std::string name)
+{
+	std::string dotName = name+".dot";
+	std::string pngName = name+".png";
+	std::string cmd = "dot -Tpng " + dotName + " -o " + pngName;
+	std::ofstream dotfile(dotName);
+	write_graphviz (dotfile, inGraph, boost::make_label_writer(boost::get(&VertexProperty::name, mrfgraph)));
+	if(system(cmd.c_str()))
 	{
 		std::cerr << "Error calling Graphviz" << std::endl;
 	}
-	unlink("MRF.dot");
+	unlink(dotName.c_str());
 	return true;
 }
-
 std::vector<std::string> MarkovRandomField::splitString(std::string str, std::string delimiter)//O(str.size())
 {
 	std::vector<std::string> parts;
@@ -200,6 +210,7 @@ std::vector<std::string> MarkovRandomField::splitString(std::string str, std::st
 
 	return parts;
 }
+
 
 Factor MarkovRandomField::dumbQuery(std::vector<std::string> * query)
 {
@@ -226,7 +237,7 @@ Factor MarkovRandomField::dumbQuery(std::vector<std::string> * query)
 	return newFactor;
 }
 
-Factor MarkovRandomField::variableEliminationQuery(std::vector<std::string> * query)
+Factor MarkovRandomField::variableEliminationQuery(std::vector<std::string> * query, std::string heuristics_type)
 {
 	std::deque<std::pair<FactorVar,std::vector<unsigned int>>> mrfVar;
 	std::pair<FactorVar,std::vector<unsigned int>> margVar;
@@ -249,10 +260,19 @@ Factor MarkovRandomField::variableEliminationQuery(std::vector<std::string> * qu
 	while(!mrfVar.empty())
 	{
 		unsigned int j;
-		
-		//std::sort(mrfVar.begin(),mrfVar.end(),mrfFacNumVarComp());
-		std::sort(mrfVar.begin(),mrfVar.end(),mrfNeighbVarComp(&newFactors));
-		//std::sort(mrfVar.begin(),mrfVar.end(),mrfNeighbCardVarComp(&newFactors));
+
+		if(heuristics_type=="clique_num")
+		{
+			std::sort(mrfVar.begin(),mrfVar.end(),mrfFacNumVarComp());	
+		}
+		else if(heuristics_type == "neighbor_num")
+		{
+			std::sort(mrfVar.begin(),mrfVar.end(),mrfNeighbVarComp(&newFactors));
+		}
+		else if(heuristics_type == "neighbor_multiCard")
+		{
+			std::sort(mrfVar.begin(),mrfVar.end(),mrfNeighbCardVarComp(&newFactors));
+		}
 		
 		margVar = mrfVar.front();
 		mrfVar.pop_front();
@@ -333,7 +353,7 @@ Factor MarkovRandomField::variableEliminationQuery(std::vector<std::string> * qu
 	{
 		newFactor = newFactor * newFactors[i+1];
 	}
-	std::cout << "VE Query Number of Operations: " << counter << std::endl;
+	std::cout << "VE Query Number of Operations: " << counter  << " heuristics: " << heuristics_type << std::endl;
 	newFactor.normalize();
 	return newFactor;
 }
@@ -343,19 +363,109 @@ void MarkovRandomField::clearOpCounter()
 	counter=0;
 }
 
-void MarkovRandomField::test()
+void MarkovRandomField::run()
 {
-	std::vector<std::string> asking = {"Joao"};
-	Factor queryFac = dumbQuery(&asking);
+	unsigned long long dumbQueryNum = 1;
+	std::vector<std::string> asking = {"Gabriela"};
+	Factor queryFac;
+//	Factor queryFac = dumbQuery(&asking);
+//	queryFac.printFactor();
+
+	for(unsigned int i=0; i<mrf_variables.size(); i++)
+	{
+		dumbQueryNum *= (unsigned long long)(mrf_variables[i].first.second);
+	}
+	std::cout << "Dumb Query operations: " << dumbQueryNum << std::endl;
+
+	clearOpCounter();
+	queryFac = variableEliminationQuery(&asking, "creation_order");
 	queryFac.printFactor();
 	
 	clearOpCounter();
-	queryFac = variableEliminationQuery(&asking);
+	queryFac = variableEliminationQuery(&asking, "clique_num");
 	queryFac.printFactor();
+
+	clearOpCounter();
+	queryFac = variableEliminationQuery(&asking, "neighbor_num");
+	queryFac.printFactor();
+
+	clearOpCounter();
+	queryFac = variableEliminationQuery(&asking, "neighbor_multiCard");
+	queryFac.printFactor();
+	
+	Graph chordalGraph = triangulateGraph(mrfgraph);
+
 }
 
 Factor MarkovRandomField::query(std::vector<std::string> * query)
 {
 	//return dumbQuery(query);
-	return variableEliminationQuery(query);
+	return variableEliminationQuery(query, "neighbor_num");
+}
+
+Graph MarkovRandomField::triangulateGraph(Graph inputGraph)
+{
+	Graph retGraph;
+	VertexProperty vp;
+	AdjacencyIterator ai, ai_end, ai_aux;
+	AdjacencyIterator retai,retai_aux;
+	std::pair<VertexIterator,VertexIterator> vertices, retvertices;
+	VertexIterator chosen, retfound, retfound2;
+	unsigned int count=0, minCount=999999;
+	retGraph = inputGraph;
+	std::cout << std::endl << std::endl << std::endl << std::endl;
+	std::cout << "Creating Chordal Graph" << std::endl;
+	while(inputGraph.num_vertices()>0)
+	{
+		minCount = 999999;
+		for (vertices = boost::vertices(inputGraph); vertices.first != vertices.second; ++vertices.first)
+		{
+			count = 0;
+			for (boost::tie(ai, ai_end) = boost::adjacent_vertices(*vertices.first, inputGraph); ai != ai_end; ++ai)
+			{
+				count++;
+			}
+			if(count < minCount)
+			{
+				minCount = count;
+				chosen = vertices.first;
+			}
+		}
+		std::cout << "Chosen " << inputGraph[*chosen].name << " Count " << minCount << std::endl;
+		for (boost::tie(ai, ai_end) = boost::adjacent_vertices(*chosen, inputGraph); ai != ai_end; ++ai)
+		{
+			ai_aux = ai;
+			for(++ai_aux; ai_aux != ai_end; ++ai_aux)
+			{
+				for(retvertices = boost::vertices(retGraph); retvertices.first != retvertices.second; ++retvertices.first)
+				{
+					if(inputGraph[*ai].name == retGraph[*retvertices.first].name)
+					{
+						retfound = retvertices.first;
+					}
+					else
+					{
+						if(inputGraph[*ai_aux].name == retGraph[*retvertices.first].name)
+						{
+							retfound2 = retvertices.first;
+						}
+					}
+				}
+				if(!boost::edge(*ai,*ai_aux,inputGraph).second)
+				{
+					std::cout << "Inserting Edge between " << retGraph[*retfound].name << " and " << retGraph[*retfound2].name << std::endl;
+					retGraph.add_edge(*ai,*ai_aux);
+				}
+				if(!boost::edge(*retfound,*retfound2,retGraph).second)
+				{
+					retGraph.add_edge(*retfound,*retfound2);
+				}
+			}
+		}
+		boost::clear_vertex(*chosen,inputGraph);
+		boost::remove_vertex(*chosen,inputGraph);
+	}
+	//
+	draw(retGraph,"chordalGraph");
+	return retGraph;
 }
