@@ -8,5 +8,6 @@ int main(int,char*[])
 
 	mrf.run();
 	mrf.drawMRF();
+	mrf.drawCliqueTree();
   	return 0;
 }

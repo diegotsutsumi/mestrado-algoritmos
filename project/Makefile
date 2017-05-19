@@ -1,4 +1,4 @@
-CXXFLAGS += -std=c++11 -Wall -03
+CXXFLAGS += -std=c++11 -Wall
 exec: cliquetree
 debug: CXXFLAGS += -g -ggdb -O0
 debug: exec

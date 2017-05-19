@@ -3,6 +3,8 @@
 #include <exception>
 #include <algorithm>
 #include "MarkovRandomField.h"
+#include <boost/graph/bron_kerbosch_all_cliques.hpp>
+#include <boost/graph/kruskal_min_spanning_tree.hpp>
 
 MarkovRandomField::MarkovRandomField(std::string _inputPath)
 {
@@ -37,7 +39,6 @@ bool MarkovRandomField::loadInput()
 	unsigned int factorNumber;
 	std::vector<std::string> factorVar;
 	VertexProperty vp;
-	EdgeProperty ep;
 	std::vector<VertexDescriptor> vd_vector;
 	std::pair<VertexIterator,VertexIterator> vertices;
 	bool alreadyThere;
@@ -99,14 +100,13 @@ bool MarkovRandomField::loadInput()
 					toBePushed.setVariables(mrff);
 					toBePushed.setCounter(&counter);
 					factors_aux.push_back(toBePushed);
-					ep.weight = 1;
 					for(unsigned int j=0; j<vd_vector.size();j++)
 					{
 						for(unsigned int k=j; k<vd_vector.size(); k++)
 						{
 							if(j!=k && !edge(vd_vector[j],vd_vector[k],mrfgraph).second)
 							{
-								mrfgraph.add_edge(vd_vector[j],vd_vector[k],ep);
+								mrfgraph.add_edge(vd_vector[j],vd_vector[k],1);
 							}
 						}
 					}
@@ -166,19 +166,29 @@ bool MarkovRandomField::loadInput()
 
 bool MarkovRandomField::drawMRF()
 {
-	return draw(mrfgraph,"MRF");
+	return draw(mrfgraph,"MRF",false);
 }
+
 bool MarkovRandomField::drawCliqueTree()
 {
-	return draw(cliquetree,"CliqueTree");
+	return draw(cliquetree,"CliqueTree",true);
 }
-bool MarkovRandomField::draw(Graph inGraph, std::string name)
+
+bool MarkovRandomField::draw(Graph inGraph, std::string name, bool drawWeight)
 {
 	std::string dotName = name+".dot";
 	std::string pngName = name+".png";
 	std::string cmd = "dot -Tpng " + dotName + " -o " + pngName;
 	std::ofstream dotfile(dotName);
-	write_graphviz (dotfile, inGraph, boost::make_label_writer(boost::get(&VertexProperty::name, mrfgraph)));
+
+	if(drawWeight)
+	{
+		write_graphviz (dotfile, inGraph, boost::make_label_writer(boost::get(&VertexProperty::name, mrfgraph)),boost::make_label_writer(boost::get(boost::edge_weight, mrfgraph)));
+	}
+	else
+	{
+		write_graphviz (dotfile, inGraph, boost::make_label_writer(boost::get(&VertexProperty::name, mrfgraph)));
+	}
 	if(system(cmd.c_str()))
 	{
 		std::cerr << "Error calling Graphviz" << std::endl;
@@ -186,6 +196,7 @@ bool MarkovRandomField::draw(Graph inGraph, std::string name)
 	unlink(dotName.c_str());
 	return true;
 }
+
 std::vector<std::string> MarkovRandomField::splitString(std::string str, std::string delimiter)//O(str.size())
 {
 	std::vector<std::string> parts;
@@ -210,7 +221,6 @@ std::vector<std::string> MarkovRandomField::splitString(std::string str, std::st
 
 	return parts;
 }
-
 
 Factor MarkovRandomField::dumbQuery(std::vector<std::string> * query)
 {
@@ -363,6 +373,12 @@ void MarkovRandomField::clearOpCounter()
 	counter=0;
 }
 
+Factor MarkovRandomField::query(std::vector<std::string> * query)
+{
+	//return dumbQuery(query);
+	return variableEliminationQuery(query, "neighbor_num");
+}
+
 void MarkovRandomField::run()
 {
 	unsigned long long dumbQueryNum = 1;
@@ -393,14 +409,87 @@ void MarkovRandomField::run()
 	queryFac = variableEliminationQuery(&asking, "neighbor_multiCard");
 	queryFac.printFactor();
 	
-	Graph chordalGraph = triangulateGraph(mrfgraph);
-
+	buildCliqueTree();
 }
 
-Factor MarkovRandomField::query(std::vector<std::string> * query)
+bool MarkovRandomField::buildCliqueTree()
 {
-	//return dumbQuery(query);
-	return variableEliminationQuery(query, "neighbor_num");
+	Graph cliqueGraph;
+	VertexProperty vp;
+	std::vector<VertexDescriptor> vdVec;
+	Graph chordalGraph = triangulateGraph(mrfgraph);
+	std::vector<std::vector<VertexDescriptor>> cliques = findAllCliques(&chordalGraph);
+	for(unsigned int i=0; i<cliques.size(); i++)
+	{
+		vp.name = "";
+		for(unsigned int j=0; j<cliques[i].size(); j++)
+		{
+			vp.name = vp.name + chordalGraph[cliques[i][j]].name + ",";
+			std::cout << chordalGraph[cliques[i][j]].name << ":" << i << ":" << j << " ";
+		}
+		std::cout << std::endl << vp.name << " " << cliques[i].size() << std::endl;
+		vp.name = vp.name.substr(0,vp.name.size()-1);
+		vdVec.push_back(cliqueGraph.add_vertex(vp));
+	}
+
+	int countEdge=0;
+	for(unsigned int i=0; i<cliques.size(); i++)
+	{
+		for(unsigned int j=i+1; j<cliques.size(); j++)
+		{
+			countEdge=0;
+			for(unsigned int k=0; k<cliques[i].size(); k++)
+			{
+				for(unsigned int m=0; m<cliques[j].size(); m++)
+				{
+					if(cliques[i][k] == cliques[j][m])
+					{
+						countEdge++;
+					}
+				}
+			}
+			if(countEdge>0)
+			{
+				cliqueGraph.add_edge(vdVec[i],vdVec[j],(0-countEdge));
+			}
+		}
+	}
+	draw(cliqueGraph,"cliqueGraph", true);
+
+	std::vector<EdgeDescriptor> spanning_tree;
+	boost::kruskal_minimum_spanning_tree(cliqueGraph, std::back_inserter(spanning_tree));
+	std::pair<EdgeIterator,EdgeIterator> es = boost::edges(cliqueGraph);
+	std::pair<VertexIterator,VertexIterator> vertices;
+	std::vector<std::pair<VertexDescriptor,VertexDescriptor>> vdGrphTree;
+	for (vertices = boost::vertices(cliqueGraph); vertices.first != vertices.second; ++vertices.first)
+	{
+		vdGrphTree.push_back(std::make_pair(cliquetree.add_vertex(cliqueGraph[*vertices.first]),*vertices.first));
+	}
+
+	for (EdgeIterator eit = es.first; eit != es.second; ++eit)
+	{
+		if(std::find(spanning_tree.begin(), spanning_tree.end(), *eit)!=spanning_tree.end())
+		{
+			unsigned i=0,j=0;
+			for(i=0; i<vdGrphTree.size(); i++)
+			{
+				if(vdGrphTree[i].second == boost::source(*eit,cliqueGraph))
+				{
+					break;
+				}
+			}
+			for(j=0; j<vdGrphTree.size(); j++)
+			{
+				if(vdGrphTree[j].second == boost::target(*eit,cliqueGraph))
+				{
+					break;
+				}
+			}
+			cliquetree.add_edge(vdGrphTree[i].first,vdGrphTree[j].first,(0-get(boost::edge_weight_t(), cliqueGraph, *eit)));
+		}
+	}
+
+	return true;
 }
 
 Graph MarkovRandomField::triangulateGraph(Graph inputGraph)
@@ -414,7 +503,7 @@ Graph MarkovRandomField::triangulateGraph(Graph inputGraph)
 	unsigned int count=0, minCount=999999;
 	retGraph = inputGraph;
 	std::cout << std::endl << std::endl << std::endl << std::endl;
-	std::cout << "Creating Chordal Graph" << std::endl;
+	std::cout << "---------Creating Chordal Graph---------" << std::endl;
 	while(inputGraph.num_vertices()>0)
 	{
 		minCount = 999999;
@@ -465,7 +554,29 @@ Graph MarkovRandomField::triangulateGraph(Graph inputGraph)
 		boost::clear_vertex(*chosen,inputGraph);
 		boost::remove_vertex(*chosen,inputGraph);
 	}
-	//
-	draw(retGraph,"chordalGraph");
+	draw(retGraph,"chordalGraph", false);
+	std::cout << "----------------------------------------" << std::endl;
+	std::cout << std::endl << std::endl << std::endl << std::endl;
 	return retGraph;
+}
+
+std::vector<std::vector<VertexDescriptor>> MarkovRandomField::findAllCliques(Graph *inGraph)
+{
+	std::vector<std::vector<VertexDescriptor>> cliques;
+	clique_vis vis(&cliques);
+	boost::bron_kerbosch_all_cliques(*inGraph, vis);
+	std::cout << std::endl << std::endl << std::endl << std::endl;
+	std::cout << "---------Finding All Maximal Cliques---------" << std::endl;
+	for(unsigned int i=0; i<cliques.size(); i++)
+	{
+		std::cout << "Clique " << i << std::endl;
+		for(unsigned int j=0; j<cliques[i].size(); j++)
+		{
+			std::cout << (*inGraph)[cliques[i][j]].name << " ";
+		}
+		std::cout << std::endl;
+	}
+	std::cout << "---------------------------------------------" << std::endl;
+	std::cout << std::endl << std::endl << std::endl << std::endl;
+	return cliques;
 }
