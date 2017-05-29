@@ -382,31 +382,35 @@ Factor MarkovRandomField::query(std::vector<std::string> * query)
 void MarkovRandomField::run()
 {
 	unsigned long long dumbQueryNum = 1;
-	std::vector<std::string> asking = {"Gabriela"};
+	std::vector<std::string> query1 = {"Gabriela"};
+	std::vector<std::string> query2 = {"Isabel","Rafaela"};
 	Factor queryFac;
 //	Factor queryFac = dumbQuery(&asking);
 //	queryFac.printFactor();
 
 	for(unsigned int i=0; i<mrf_variables.size(); i++)
 	{
-		dumbQueryNum *= (unsigned long long)(mrf_variables[i].first.second);
+		if(std::find(query2.begin(),query2.end(),mrf_variables[i].first.first)==query2.end())
+		{
+			dumbQueryNum *= (unsigned long long)(mrf_variables[i].first.second);
+		}
 	}
 	std::cout << "Dumb Query operations: " << dumbQueryNum << std::endl;
 
 	clearOpCounter();
-	queryFac = variableEliminationQuery(&asking, "creation_order");
+	queryFac = variableEliminationQuery(&query2, "creation_order");
 	queryFac.printFactor();
 	
 	clearOpCounter();
-	queryFac = variableEliminationQuery(&asking, "clique_num");
+	queryFac = variableEliminationQuery(&query2, "clique_num");
 	queryFac.printFactor();
 
 	clearOpCounter();
-	queryFac = variableEliminationQuery(&asking, "neighbor_num");
+	queryFac = variableEliminationQuery(&query2, "neighbor_num");
 	queryFac.printFactor();
 
 	clearOpCounter();
-	queryFac = variableEliminationQuery(&asking, "neighbor_multiCard");
+	queryFac = variableEliminationQuery(&query2, "neighbor_multiCard");
 	queryFac.printFactor();
 	
 	buildCliqueTree();
